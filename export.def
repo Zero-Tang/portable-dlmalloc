@@ -1,0 +1,27 @@
+LIBRARY dlmalloc
+
+EXPORTS
+	dlbulk_free @1
+	calloc=dlcalloc @2
+	free=dlfree @3
+	dlindependent_calloc @4
+	dlindependent_comalloc @5
+	dlmallinfo @6
+	malloc=dlmalloc @7
+	dlmalloc_footprint @8
+	dlmalloc_footprint_limit @9
+	dlmalloc_max_footprint @10
+	dlmalloc_set_footprint_limit @11
+	dlmalloc_trim @12
+	dlmallopt @13
+	dlmemalign @14
+	dlposix_memalign @15
+	dlpvalloc @16
+	realloc=dlrealloc @17
+	dlrealloc_in_place @18
+	dlvalloc @19
+
+	dlcalloc @20
+	dlfree @21
+	dlmalloc @22
+	dlrealloc @23
