@@ -1441,7 +1441,15 @@ DLMALLOC_EXPORT int mspace_mallopt(int, int);
 #pragma warning( disable : 4146 ) /* no "unsigned" warnings */
 #endif /* _MSC_VER */
 #if !NO_MALLOC_STATS
+# ifdef PORTABLE
+int dprintf2(const char* src_fn,const int src_ln,const char* format,...);
+#define dprintf(fmt,...)	dprintf2(__FILE__,__LINE__,fmt,##__VA_ARGS__)
+# else	/* PORTABLE */
 #include <stdio.h>       /* for printing in malloc_stats */
+#define dprintf(fmt,...)	fprintf(stderr,fmt,##__VA_ARGS__)
+# endif	/* PORTABLE */
+#else	/* NO_MALLOC_STATS */
+#define dprintf(fmt,...)
 #endif /* NO_MALLOC_STATS */
 #ifndef LACKS_ERRNO_H
 #include <errno.h>       /* for MALLOC_FAILURE_ACTION */
@@ -1644,6 +1652,15 @@ unsigned char _BitScanReverse(unsigned long *index, unsigned long mask);
 #if HAVE_MMAP
 
 #ifndef WIN32
+#ifdef PORTABLE
+void* custom_mmap(size_t length);
+int custom_munmap(void* ptr,size_t length);
+void* custom_direct_mmap(size_t length);
+
+#define MMAP_DEFAULT(s)		custom_mmap(s)
+#define MUNMAP_DEFAULT(a,s)	custom_munmap(a,s)
+#define DIRECT_MMAP_DEFAULT(s)	custom_direct_mmap(s)
+#else  /* PORTABLE */
 #define MUNMAP_DEFAULT(a, s)  munmap((a), (s))
 #define MMAP_PROT            (PROT_READ|PROT_WRITE)
 #if !defined(MAP_ANONYMOUS) && defined(MAP_ANON)
@@ -1666,7 +1683,7 @@ static int dev_zero_fd = -1; /* Cached file descriptor for /dev/zero. */
 #endif /* MAP_ANONYMOUS */
 
 #define DIRECT_MMAP_DEFAULT(s) MMAP_DEFAULT(s)
-
+#endif /* PORTABLE */
 #else /* WIN32 */
 
 /* Win32 MMAP via VirtualAlloc */
@@ -1825,6 +1842,20 @@ static FORCEINLINE int win32munmap(void* ptr, size_t size) {
 /* #define TRY_LOCK(lk) ... */
 /* static MLOCK_T malloc_global_mutex = ... */
 
+typedef void* MLOCK_T;
+
+void init_lock(MLOCK_T *lock);
+void final_lock(MLOCK_T *lock);
+void acquire_lock(MLOCK_T *lock);
+void release_lock(MLOCK_T *lock);
+
+static MLOCK_T malloc_global_mutex;
+
+#define INITIAL_LOCK(lk)	init_lock(lk)
+#define DESTROY_LOCK(lk)	final_lock(lk)
+#define ACQUIRE_LOCK(lk)	(acquire_lock(lk),0)
+#define RELEASE_LOCK(lk)	release_lock(lk)
+
 #elif USE_SPIN_LOCKS
 
 /* First, define CAS_LOCK and CLEAR_LOCK on ints */
@@ -1902,7 +1933,7 @@ static MLOCK_T malloc_global_mutex = 0;
 #else /* USE_RECURSIVE_LOCKS */
 /* types for lock owners */
 #ifdef WIN32
-#define THREAD_ID_T           DWORD
+#define THREAD_ID_T           unsigned __int32
 #define CURRENT_THREAD        GetCurrentThreadId()
 #define EQ_OWNER(X,Y)         ((X) == (Y))
 #else
@@ -2875,7 +2906,7 @@ static size_t traverse_and_check(mstate m);
 	I = NTREEBINS-1;\
   else {\
 	unsigned int K;\
-	_BitScanReverse((DWORD *) &K, (DWORD) X);\
+	_BitScanReverse((unsigned __int32 *) &K, (unsigned __int32) X);\
 	I =  (bindex_t)((K << 1) + ((S >> (K + (TREEBIN_SHIFT-1)) & 1)));\
   }\
 }
@@ -2960,7 +2991,7 @@ static size_t traverse_and_check(mstate m);
 #define compute_bit2idx(X, I)\
 {\
   unsigned int J;\
-  _BitScanForward((DWORD *) &J, X);\
+  _BitScanForward((unsigned __int32 *) &J, X);\
   I = (bindex_t)J;\
 }
 
@@ -3553,9 +3584,9 @@ static void internal_malloc_stats(mstate m) {
 	  }
 	}
 	POSTACTION(m); /* drop lock */
-	fprintf(stderr, "max system bytes = %10lu\n", (unsigned long)(maxfp));
-	fprintf(stderr, "system bytes     = %10lu\n", (unsigned long)(fp));
-	fprintf(stderr, "in use bytes     = %10lu\n", (unsigned long)(used));
+	dprintf("max system bytes = %10lu\n", (unsigned long)(maxfp));
+	dprintf("system bytes     = %10lu\n", (unsigned long)(fp));
+	dprintf("in use bytes     = %10lu\n", (unsigned long)(used));
   }
 }
 #endif /* NO_MALLOC_STATS */
