@@ -14,7 +14,7 @@ To port `dlmalloc` to your platform, implement the following procedures:
 	void* custom_mmap(size_t length);
 	int custom_munmap(void* ptr,size_t length);
 	```
-- `custom_direct_mmap`: Extend the allocated pages. This is optional. Should you wish to implement this, you would have to keep track of allocated pages. Return `(void*)-1` to indicate failure/no-support.
+- `custom_direct_mmap`: Extend the allocated pages. This is optional. Return `(void*)-1` to indicate failure/no-support.
 	```C
 	void* custom_direct_mmap(size_t length);
 	```
@@ -44,6 +44,8 @@ When you compile `malloc.c`, define the following preprocessor flags:
 - `USE_DL_PREFIX`: This flags makes all routines from `dlmalloc` has `dl` prefix so that you can avoid name-conflict issues.
 - `DEFAULT_GRANULARITY`: This constant determines the size granularity when `dlmalloc` calls `custom_mmap`. The default is 64KiB.
 
+Note: the following samples with Custom Port do not keep track of allocated pages. There will be unreleased pages after your program quits even if you freed all allocated buffers. If you port `dlmalloc` to programs that are volatile to its address-space (e.g.: Kernel-Mode drivers, pluggable dynamic libraries), you have to keep track of allocated pages and release them before you quit.
+
 ## Build
 This chapter describes how to build this `dlmalloc` library. Note that this chapter emphasizes on the given samples. If you wish to port `dlmalloc` to your platform, it's recommended to check out [Port to Your Platform](#port-to-your-platform) section, which provides the generalized guide for building the portable `dlmalloc`. You should be able to use this generalized guide if you are familiar with your compiler suite / build system.
 
@@ -69,16 +71,31 @@ The `dlmalloc.lib` can be directly used in anywhere, as long as the program uses
 
 See `port_win.c` for details.
 
-### Build for UEFI
+### Build for UEFI with Custom Port
 Download [Enterprise Windows Driver Kit for Windows 11, version 24H2 with Visual Studio Build Tools 17.10.5 (EWDK-26100)](https://learn.microsoft.com/en-us/legal/windows/hardware/enterprise-wdk-license-2022) and mount it to V: drive. You may use [WinCDEmu](https://wincdemu.sysprogs.org/download/) to mount ISO images.
 
-Clone the [EDK-II-Library](https://github.com/Zero-Tang/EDK-II-Library).
+Clone the [EDK-II-Library](https://github.com/Zero-Tang/EDK-II-Library) recursively and create the `EDK2_PATH` environment variable pointing to the `EDK-II-Library`.
 
 Execute `compchk_uefix64.bat` (Debug/Check version, optimizations are disabled) and `compfre_uefix64.bat` (Release/Free version, optimizations are enabled) to build static libraries and corresponding samples.
 
 This option serves as a basic sample for implementing necessary routines for thread-safe `dlmalloc` on UEFI platform. This sample implements a TAS spinlock to act as a mutex.
 
 See `port_uefi.c` for details.
+
+### Build for Rust with Custom Port
+Download [Enterprise Windows Driver Kit for Windows 11, version 24H2 with Visual Studio Build Tools 17.10.5 (EWDK-26100)](https://learn.microsoft.com/en-us/legal/windows/hardware/enterprise-wdk-license-2022) and mount it to V: drive. You may use [WinCDEmu](https://wincdemu.sysprogs.org/download/) to mount ISO images.
+
+Install [Rust](https://www.rust-lang.org/) with target `x86_64-pc-windows-msvc`.
+
+In `rust-sample` directory, execute:
+```
+cargo build
+```
+
+This option serves as a basic sample for utilizing `dlmalloc` as the Rust global allocator.
+
+Note that `print!` (as well as `println!`) macro from rust std has allocation behaviors! To be precise, both `std::fmt::Arguments::to_string()` and `std::io::stdout().write()` have allocation behaviors! Therefore, this sample provides a `naprint!` macro for you to trace allocation operations without recursion. Be careful, the `naprint!` macro cannot handle formatted output larger than 512 bytes! \
+Therefore, if you use `print!`/`println!` in `dlmalloc` port routines, you will find your program being deadlocked, as `SRWLock` does not support recursive locking.
 
 ## License
 This repository is under the [MIT license](./license.txt). \
