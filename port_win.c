@@ -28,6 +28,12 @@ void* custom_direct_mmap(size_t length)
 	return (void*)-1;
 }
 
+void custom_abort()
+{
+	puts("The dlmalloc library called abort!");
+	ExitProcess(1);
+}
+
 int dprintf2(const char* src_fn,const int src_ln,const char* fmt,...)
 {
 	va_list arg_list;

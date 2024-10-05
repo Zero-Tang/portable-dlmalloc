@@ -565,12 +565,22 @@ MAX_RELEASE_CHECK_RATE   default: 4095 unless not HAVE_MMAP
 #define HAVE_MMAP 1
 #define HAVE_MORECORE 0
 #define LACKS_UNISTD_H
+#define LACKS_ERRNO_H
 #define LACKS_SYS_PARAM_H
 #define LACKS_SYS_MMAN_H
+#define LACKS_STDLIB_H
 #define LACKS_STRING_H
 #define LACKS_STRINGS_H
 #define LACKS_SYS_TYPES_H
 #define LACKS_SCHED_H
+#define LACKS_TIME_H
+#ifndef MALLOC_FAILURE_ACTION
+#define MALLOC_FAILURE_ACTION
+#endif /* MALLOC_FAILURE_ACTION */
+
+void custom_abort(void);
+
+#define ABORT custom_abort()
 #endif
 
 #if defined(DARWIN) || defined(_DARWIN)
@@ -1453,6 +1463,9 @@ int dprintf2(const char* src_fn,const int src_ln,const char* format,...);
 #endif /* NO_MALLOC_STATS */
 #ifndef LACKS_ERRNO_H
 #include <errno.h>       /* for MALLOC_FAILURE_ACTION */
+#else	/* LACKS_ERRNO_H*/
+#define ENOMEM	12
+#define EINVAL	22
 #endif /* LACKS_ERRNO_H */
 #ifdef DEBUG
 #if ABORT_ON_ASSERT_FAILURE

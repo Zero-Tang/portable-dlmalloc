@@ -25,11 +25,16 @@ To port `dlmalloc` to your platform, implement the following procedures:
 	void acquire_lock(void* *lock);	// Acquire the mutex.
 	void release_lock(void* *lock);	// Release the mutex.
 	```
+- `custom_abort`: Implement `abort()` routine. `dlmalloc` calls `abort()` when assertion fails.
+	```C
+	void custom_abort(void);
+	```
 - `dprintf2`: Implement debug-printer, which can trace file-name and line-numbers, for `dlmalloc`. Note that the format specifiers are implementation-specific. For example, you might have to use `%a` to print ASCII-strings in EDK2. You do not have to implement `dprintf2` if you won't debug `malloc.c`.
 	```C
 	int dprintf2(const char* src_fn,const int src_ln,const char* fmt,...);
 	```
 	If you need to print stuff in `malloc.c` codes, just use the `dprintf` macro.
+- `memcpy`/`memset`: I suppose no explanations are needed for these two. `dlmalloc` uses these two routines, but they can be easily implemented. Some embedded SDKs may even include `memcpy`/`memset`, though they might not have `malloc`.
 
 When you compile `malloc.c`, define the following preprocessor flags:
 
@@ -37,9 +42,10 @@ When you compile `malloc.c`, define the following preprocessor flags:
 - `NO_MALLOC_STATS=1`: This flag forbids `dlmalloc` from outputting debug messages. Otherwise, you will have to implement `dprintf2`.
 - `USE_LOCKS=2`: This flag makes `dlmalloc` call `init_lock`, `final_lock`, `acquire_lock` and `release_lock` functions. This flag is required to port `dlmalloc` to your platform while ensuring thread-safety. Otherwise, define `USE_LOCKS=0`.
 - `USE_DL_PREFIX`: This flags makes all routines from `dlmalloc` has `dl` prefix so that you can avoid name-conflict issues.
+- `DEFAULT_GRANULARITY`: This constant determines the size granularity when `dlmalloc` calls `custom_mmap`. The default is 64KiB.
 
 ## Build
-This chapter describes how to build this `dlmalloc` library. Note that this chapter only guides you how to build the samples. If you wish to port `dlmalloc` to your platform, it's recommended to check out [Port to Your Platform](#port-to-your-platform) section.
+This chapter describes how to build this `dlmalloc` library. Note that this chapter emphasizes on the given samples. If you wish to port `dlmalloc` to your platform, it's recommended to check out [Port to Your Platform](#port-to-your-platform) section, which provides the generalized guide for building the portable `dlmalloc`. You should be able to use this generalized guide if you are familiar with your compiler suite / build system.
 
 ### Build for Windows with Internal Port
 Download [Windows Driver Kit 7.1 (WDK-7600)](https://www.microsoft.com/en-us/download/details.aspx?id=11800) and install to default location in C: drive.
@@ -62,6 +68,17 @@ This option serves as a basic sample for implementing necessary routines for thr
 The `dlmalloc.lib` can be directly used in anywhere, as long as the program uses MSVC ABI and PE-COFF executable format.
 
 See `port_win.c` for details.
+
+### Build for UEFI
+Download [Enterprise Windows Driver Kit for Windows 11, version 24H2 with Visual Studio Build Tools 17.10.5 (EWDK-26100)](https://learn.microsoft.com/en-us/legal/windows/hardware/enterprise-wdk-license-2022) and mount it to V: drive. You may use [WinCDEmu](https://wincdemu.sysprogs.org/download/) to mount ISO images.
+
+Clone the [EDK-II-Library](https://github.com/Zero-Tang/EDK-II-Library).
+
+Execute `compchk_uefix64.bat` (Debug/Check version, optimizations are disabled) and `compfre_uefix64.bat` (Release/Free version, optimizations are enabled) to build static libraries and corresponding samples.
+
+This option serves as a basic sample for implementing necessary routines for thread-safe `dlmalloc` on UEFI platform. This sample implements a TAS spinlock to act as a mutex.
+
+See `port_uefi.c` for details.
 
 ## License
 This repository is under the [MIT license](./license.txt). \
