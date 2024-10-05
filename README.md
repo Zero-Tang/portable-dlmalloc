@@ -94,6 +94,11 @@ cargo build
 
 This option serves as a basic sample for utilizing `dlmalloc` as the Rust global allocator.
 
+When you implement port functions, make sure you append `#[no_mangle] extern "C"` prefix on your function. For example:
+```Rust
+#[no_mangle] extern "C" fn custom_abort()->!
+```
+
 Note that `print!` (as well as `println!`) macro from rust std has allocation behaviors! To be precise, both `std::fmt::Arguments::to_string()` and `std::io::stdout().write()` have allocation behaviors! Therefore, this sample provides a `naprint!` macro for you to trace allocation operations without recursion. Be careful, the `naprint!` macro cannot handle formatted output larger than 512 bytes! \
 Therefore, if you use `print!`/`println!` in `dlmalloc` port routines, you will find your program being deadlocked, as `SRWLock` does not support recursive locking.
 
