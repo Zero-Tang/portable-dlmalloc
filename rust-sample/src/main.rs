@@ -45,6 +45,18 @@ impl fmt::Write for FormatBuffer
 	};
 }
 
+#[macro_export] macro_rules! naprintln
+{
+	()=>
+	{
+		system_print(format_args!("\n"))
+	};
+	($($args:tt)*)=>
+	{
+		system_print(format_args!($($args)*))
+	};
+}
+
 extern "C"
 {
 	fn dlmalloc(length:usize)->*mut c_void;
@@ -58,7 +70,7 @@ unsafe impl GlobalAlloc for DLMalloc
 {
 	unsafe fn alloc(&self, layout:Layout) -> *mut u8
 	{
-		naprint!("[malloc] length: 0x{:X}\n",layout.size());
+		naprintln!("[malloc] length: 0x{:X}\n",layout.size());
 		dlmalloc(layout.size()).cast()
 	}
 
@@ -80,5 +92,7 @@ unsafe impl GlobalAlloc for DLMalloc
 fn main()
 {
 	let p:Box<u32>=Box::new(55);
-	println!("Hello, world! {}\n",p);
+	let mut v:Vec<u32>=vec![5,4,1,6,3,8,9];
+	v.sort();
+	println!("Hello, world! {}\n{v:?}",p);
 }

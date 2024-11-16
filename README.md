@@ -6,6 +6,8 @@ Portable Fork of Doug Lea's `malloc` Implementation.
 
 This repository serves as a fork so that `dlmalloc` can be ported to any arbitrary platforms modularly.
 
+This repository also contains a Rust crate so that you can `dlmalloc` in almost anywhere.
+
 ## Port To Your Platform
 To port `dlmalloc` to your platform, implement the following procedures:
 
@@ -14,10 +16,16 @@ To port `dlmalloc` to your platform, implement the following procedures:
 	void* custom_mmap(size_t length);
 	int custom_munmap(void* ptr,size_t length);
 	```
+	```Rust
+	#[no_mangle] unsafe extern "C" custom_mmap(length:usize)->*mut c_void;
+	#[no_mangle] unsafe extern "C" custom_munmap(ptr:*mut c_void,length:usize)->i32;
+ 	```
 - `custom_direct_mmap`: Extend the allocated pages. This is optional. Return `(void*)-1` to indicate failure/no-support.
 	```C
 	void* custom_direct_mmap(size_t length);
 	```
+	```Rust
+	#[no_mangle] unsafe extern "C" custom_mmap(length:usize)->*mut c_void;
 - `init_lock`/`final_lock`/`acquire_lock`/`release_lock`: Implement thread-safety for `dlmalloc`. The minimal implementation can be a simple spinlock. You do not need to implement this set of routines if you do not need thread-safety.
 	```C
 	void init_lock(void* *lock);	// Initialize the mutex.
@@ -25,15 +33,26 @@ To port `dlmalloc` to your platform, implement the following procedures:
 	void acquire_lock(void* *lock);	// Acquire the mutex.
 	void release_lock(void* *lock);	// Release the mutex.
 	```
-- `custom_abort`: Implement `abort()` routine. `dlmalloc` calls `abort()` when assertion fails.
+	```Rust
+	#[no_mangle] unsafe extern "C" init_lock(lock:*mut *mut c_void);	// Initialize the mutex.
+	#[no_mangle] unsafe extern "C" final_lock(lock:*mut *mut c_void);	// Finalize the mutex.
+	#[no_mangle] unsafe extern "C" acquire_lock(lock:*mut *mut c_void);	// Acquire the mutex.
+	#[no_mangle] unsafe extern "C" release_lock(lock:*mut *mut c_void);	// Release the mutex.
+	```
+- `custom_abort`: Implement `abort()` routine. `dlmalloc` calls `custom_abort()` when assertion fails.
 	```C
 	void custom_abort(void);
+	```
+	```Rust
+	#[no_mangle] unsafe extern "C" custom_abort()->!;
 	```
 - `dprintf2`: Implement debug-printer, which can trace file-name and line-numbers, for `dlmalloc`. Note that the format specifiers are implementation-specific. For example, you might have to use `%a` to print ASCII-strings in EDK2. You do not have to implement `dprintf2` if you won't debug `malloc.c`.
 	```C
 	int dprintf2(const char* src_fn,const int src_ln,const char* fmt,...);
 	```
 	If you need to print stuff in `malloc.c` codes, just use the `dprintf` macro.
+
+	If you use `portable-dlmalloc` crate, do not implement this routine.
 - `memcpy`/`memset`: I suppose no explanations are needed for these two. `dlmalloc` uses these two routines, but they can be easily implemented. Some embedded SDKs may even include `memcpy`/`memset`, though they might not have `malloc`.
 
 When you compile `malloc.c`, define the following preprocessor flags:
@@ -83,8 +102,6 @@ This option serves as a basic sample for implementing necessary routines for thr
 See `port_uefi.c` for details.
 
 ### Build for Rust with Custom Port
-Download [Enterprise Windows Driver Kit for Windows 11, version 24H2 with Visual Studio Build Tools 17.10.5 (EWDK-26100)](https://learn.microsoft.com/en-us/legal/windows/hardware/enterprise-wdk-license-2022) and mount it to V: drive. You may use [WinCDEmu](https://wincdemu.sysprogs.org/download/) to mount ISO images.
-
 Install [Rust](https://www.rust-lang.org/) with target `x86_64-pc-windows-msvc`.
 
 In `rust-sample` directory, execute:
