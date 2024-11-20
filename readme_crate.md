@@ -73,5 +73,14 @@ To port `dlmalloc` to your platform, implement the following procedures:
 	```
 - `memcpy`/`memset`: I suppose no explanations are needed for these two. `dlmalloc` uses these two routines, but they can be easily implemented anyway. You do not need to implement these two routines in Rust if your linker can find libraries that implement these two routines.
 
+## Build
+Since the core of the `dlmalloc` library is written in C, a working C compiler is required. \
+If your target is somewhat unorthodox, you need to set environment variables before executing `cargo build`:
+
+- `CC`: This environment variable specifies which compiler executable should be used to compile `malloc.c`
+- `AR`: This environment variable specifies which archiver executable should be used to archive this crate into a static library.
+
+If `cc` crate does not know how to invoke your compiler and/or archiver, you should write a script to emulate `cc` and/or `ar`.
+
 ## License
 This crate is under the [MIT license](./license.txt).
