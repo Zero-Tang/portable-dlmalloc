@@ -10,6 +10,8 @@ readme = "readme.md"
 keywords = ["no_std","allocator","portable"]
 categories = ["embedded","external-ffi-bindings","memory-management","no-std","no-std::no-alloc"]
 
+exclude = ["*.bat","*port_*.c","export.def","sample.c","rust-sample/*"]
+
 [workspace]
 members = ["rust-sample"]
 
