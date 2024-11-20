@@ -6,12 +6,57 @@ Portable Fork of Doug Lea's `malloc` Implementation.
 
 This repository serves as a fork so that `dlmalloc` can be ported to any arbitrary platforms modularly.
 
-This repository also contains a Rust crate so that you can `dlmalloc` in almost anywhere.
+This repository also contains a Rust crate so that you can use `portable-dlmalloc` in almost anywhere.
+
+## Rust Crate
+You may use this crate to help you make a portable global allocator. \
+You will have to implement the eight C functions as described in [Port To Your Platform](#port-to-your-platform) chapter.
+
+### Global Allocator
+To use this crate as your global allocator:
+```Rust
+use portable_dlmalloc::DLMalloc;
+#[global_alloactor] static GLOBAL_ALLOCATOR:DLMalloc=DLMalloc;
+```
+Then you will be able to use `alloc` crate.
+```
+extern crate alloc;
+```
+
+The default alignment of `dlmalloc` is twice the pointer size (e.g.: 16 bytes on 64-bit systems). \
+If you need to use a different alignment, use `dlmemalign` function to implement your [`GlobalAlloc` trait](https://doc.rust-lang.org/alloc/alloc/trait.GlobalAlloc.html).
+
+### Alternate Allocator
+The [Allocator Trait](https://doc.rust-lang.org/alloc/alloc/trait.Allocator.html) is currently nightly-only. \
+Currently, this crate does not support this trait.
+
+### Raw FFI
+The `raw` module from this crate exports FFI bindings for `dlmalloc` library.
+```Rust
+use portable_dlmalloc::raw::*;
+```
+For example, you may use `dlmallopt` to adjust `mmap` granularity (default is 2MiB in Rust crate):
+```Rust
+dlmallopt(M_GRANULARITY,0x20000);	// Change `mmap` granularity to 128KiB.
+```
+You may use `dlpvalloc` to allocate memory on page-granularity.
+```Rust
+let p=dlpvalloc(12345);
+assert_eq!(p as usize & 0xfff,0);
+```
+**Warning**: `dlpvalloc` - as well as other routines that allocate memories with higher granularities - may cause serious memory fragmentation if you overrely on them.
+```Rust
+// Assume 4096 is page size.
+let p=dlpvalloc(4096) as usize;
+let q=dlpvalloc(4096) as usize;
+// Consecutive allocations do not guarantee them to be adjacent.
+assert_eq!(q-p,8192);
+```
 
 ## Port To Your Platform
 To port `dlmalloc` to your platform, implement the following procedures:
 
-- `custom_mmap`/`custom_munmap`: Allocate and free pages from the system. `mmap` should return `(void*)-1` to indicate failure. `munmap` should return `0` to indicate success, and `-1` to indicate failure.
+- `custom_mmap`/`custom_munmap`: Allocate and free pages from the system. `mmap` should return `(void*)-1` to indicate failure instead of `NULL`. `munmap` should return `0` to indicate success, and `-1` to indicate failure.
 	```C
 	void* custom_mmap(size_t length);
 	int custom_munmap(void* ptr,size_t length);
@@ -26,7 +71,8 @@ To port `dlmalloc` to your platform, implement the following procedures:
 	```
 	```Rust
 	#[no_mangle] unsafe extern "C" custom_mmap(length:usize)->*mut c_void;
-- `init_lock`/`final_lock`/`acquire_lock`/`release_lock`: Implement thread-safety for `dlmalloc`. The minimal implementation can be a simple spinlock. You do not need to implement this set of routines if you do not need thread-safety.
+	```
+- `init_lock`/`final_lock`/`acquire_lock`/`release_lock`: Implement thread-safety for `dlmalloc`. The minimal implementation can be a simple spinlock. You can leave the implementations empty for this set of routines if you do not need thread-safety.
 	```C
 	void init_lock(void* *lock);	// Initialize the mutex.
 	void final_lock(void* *lock);	// Finalize the mutex.
@@ -39,7 +85,7 @@ To port `dlmalloc` to your platform, implement the following procedures:
 	#[no_mangle] unsafe extern "C" acquire_lock(lock:*mut *mut c_void);	// Acquire the mutex.
 	#[no_mangle] unsafe extern "C" release_lock(lock:*mut *mut c_void);	// Release the mutex.
 	```
-- `custom_abort`: Implement `abort()` routine. `dlmalloc` calls `custom_abort()` when assertion fails.
+- `custom_abort`: Implement `abort()` routine. `dlmalloc` calls `custom_abort()` when internal assertion fails. You may use panic here.
 	```C
 	void custom_abort(void);
 	```
@@ -65,8 +111,8 @@ When you compile `malloc.c`, define the following preprocessor flags:
 
 Note: the following samples with Custom Port do not keep track of allocated pages. There will be unreleased pages after your program quits even if you freed all allocated buffers. If you port `dlmalloc` to programs that are volatile to its address-space (e.g.: Kernel-Mode drivers, pluggable dynamic libraries), you have to keep track of allocated pages and release them before you quit.
 
-## Build
-This chapter describes how to build this `dlmalloc` library. Note that this chapter emphasizes on the given samples. If you wish to port `dlmalloc` to your platform, it's recommended to check out [Port to Your Platform](#port-to-your-platform) section, which provides the generalized guide for building the portable `dlmalloc`. You should be able to use this generalized guide if you are familiar with your compiler suite / build system.
+## Samples
+This chapter describes how to build samples with `dlmalloc` library. Note that this chapter emphasizes on the given samples. If you wish to port `dlmalloc` to your platform, it's recommended to check out [Port to Your Platform](#port-to-your-platform) section, which provides the generalized guide for building the portable `dlmalloc`. You should be able to use this generalized guide if you are familiar with your compiler suite / build system.
 
 ### Build for Windows with Internal Port
 Download [Windows Driver Kit 7.1 (WDK-7600)](https://www.microsoft.com/en-us/download/details.aspx?id=11800) and install to default location in C: drive.
@@ -104,9 +150,9 @@ See `port_uefi.c` for details.
 ### Build for Rust with Custom Port
 Install [Rust](https://www.rust-lang.org/) with target `x86_64-pc-windows-msvc`.
 
-In `rust-sample` directory, execute:
+Execute:
 ```
-cargo build
+cargo build --all
 ```
 
 This option serves as a basic sample for utilizing `dlmalloc` as the Rust global allocator.

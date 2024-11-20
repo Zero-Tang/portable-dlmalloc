@@ -1,10 +1,8 @@
 // Rust example for using portable dlmalloc
-use core::ffi::c_void;
-use std::alloc::*;
 use core::fmt;
+use portable_dlmalloc::DLMalloc;
 
 #[cfg(target_os="windows")] mod win;
-#[cfg(target_os="windows")] use win::system_print;
 
 // Implement a formatter without alloc operation!
 struct FormatBuffer
@@ -55,36 +53,6 @@ impl fmt::Write for FormatBuffer
 	{
 		system_print(format_args!($($args)*))
 	};
-}
-
-extern "C"
-{
-	fn dlmalloc(length:usize)->*mut c_void;
-	fn dlfree(ptr:*mut c_void)->();
-	fn dlrealloc(ptr:*mut c_void,length:usize)->*mut c_void;
-}
-
-struct DLMalloc;
-
-unsafe impl GlobalAlloc for DLMalloc
-{
-	unsafe fn alloc(&self, layout:Layout) -> *mut u8
-	{
-		naprintln!("[malloc] length: 0x{:X}\n",layout.size());
-		dlmalloc(layout.size()).cast()
-	}
-
-	unsafe fn dealloc(&self, ptr: *mut u8, _layout: Layout)
-	{
-		naprint!("[free] ptr: 0x{:p}\n",ptr);
-		dlfree(ptr.cast())
-	}
-
-	unsafe fn realloc(&self, ptr: *mut u8, _layout: Layout, new_size: usize) -> *mut u8
-	{
-		naprint!("[realloc] ptr: 0x{:p} length: 0x{:X}\n",ptr,new_size);
-		dlrealloc(ptr.cast(),new_size).cast()
-	}
 }
 
 #[global_allocator] static GLOBAL_ALLOCATOR:DLMalloc=DLMalloc;

@@ -6,6 +6,9 @@ edition = "2021"
 [build-dependencies]
 cc = "1.0.46"
 
+[dependencies.portable-dlmalloc]
+path = ".."
+
 [dependencies.windows]
 version="0.58.0"
 features=["Win32_System_Memory","Win32_System_Threading","Win32_System_Console"]

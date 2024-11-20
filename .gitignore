@@ -56,3 +56,7 @@ dkms.conf
 # Others
 *.cod
 rust-sample/target
+
+# Added by cargo
+
+/target

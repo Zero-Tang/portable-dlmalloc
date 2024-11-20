@@ -1,0 +1,19 @@
+[package]
+name = "portable-dlmalloc"
+version = "0.1.0"
+edition = "2021"
+license-file = "license.txt"
+description = "Portable Fork of Doug Lea's malloc Implementation."
+homepage = "https://github.com/Zero-Tang/portable-dlmalloc"
+repository = "https://github.com/Zero-Tang/portable-dlmalloc"
+readme = "readme.md"
+keywords = ["no_std","allocator","portable"]
+categories = ["embedded","external-ffi-bindings","memory-management","no-std","no-std::no-alloc"]
+
+[workspace]
+members = ["rust-sample"]
+
+[build-dependencies]
+cc = "1.0.46"
+
+[dependencies]
