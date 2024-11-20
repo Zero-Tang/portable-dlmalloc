@@ -6,7 +6,7 @@ use windows::Win32::System::{Memory::*,Threading::*,Console::*};
 
 use crate::{FormatBuffer,naprint};
 
-#[no_mangle] pub fn system_print(args:fmt::Arguments)
+pub fn system_print(args:fmt::Arguments)
 {
 	let mut w=FormatBuffer::new();
 	let r=fmt::write(&mut w,args);

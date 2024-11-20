@@ -1,15 +1,14 @@
 [package]
 name = "portable-dlmalloc"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
-license-file = "license.txt"
+license = "MIT"
 description = "Portable Fork of Doug Lea's malloc Implementation."
 homepage = "https://github.com/Zero-Tang/portable-dlmalloc"
 repository = "https://github.com/Zero-Tang/portable-dlmalloc"
-readme = "readme.md"
+readme = "readme_crate.md"
 keywords = ["no_std","allocator","portable"]
 categories = ["embedded","external-ffi-bindings","memory-management","no-std","no-std::no-alloc"]
-
 exclude = ["*.bat","*port_*.c","export.def","sample.c","rust-sample/*"]
 
 [workspace]

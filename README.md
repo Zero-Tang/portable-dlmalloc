@@ -9,49 +9,8 @@ This repository serves as a fork so that `dlmalloc` can be ported to any arbitra
 This repository also contains a Rust crate so that you can use `portable-dlmalloc` in almost anywhere.
 
 ## Rust Crate
-You may use this crate to help you make a portable global allocator. \
-You will have to implement the eight C functions as described in [Port To Your Platform](#port-to-your-platform) chapter.
-
-### Global Allocator
-To use this crate as your global allocator:
-```Rust
-use portable_dlmalloc::DLMalloc;
-#[global_alloactor] static GLOBAL_ALLOCATOR:DLMalloc=DLMalloc;
-```
-Then you will be able to use `alloc` crate.
-```
-extern crate alloc;
-```
-
-The default alignment of `dlmalloc` is twice the pointer size (e.g.: 16 bytes on 64-bit systems). \
-If you need to use a different alignment, use `dlmemalign` function to implement your [`GlobalAlloc` trait](https://doc.rust-lang.org/alloc/alloc/trait.GlobalAlloc.html).
-
-### Alternate Allocator
-The [Allocator Trait](https://doc.rust-lang.org/alloc/alloc/trait.Allocator.html) is currently nightly-only. \
-Currently, this crate does not support this trait.
-
-### Raw FFI
-The `raw` module from this crate exports FFI bindings for `dlmalloc` library.
-```Rust
-use portable_dlmalloc::raw::*;
-```
-For example, you may use `dlmallopt` to adjust `mmap` granularity (default is 2MiB in Rust crate):
-```Rust
-dlmallopt(M_GRANULARITY,0x20000);	// Change `mmap` granularity to 128KiB.
-```
-You may use `dlpvalloc` to allocate memory on page-granularity.
-```Rust
-let p=dlpvalloc(12345);
-assert_eq!(p as usize & 0xfff,0);
-```
-**Warning**: `dlpvalloc` - as well as other routines that allocate memories with higher granularities - may cause serious memory fragmentation if you overrely on them.
-```Rust
-// Assume 4096 is page size.
-let p=dlpvalloc(4096) as usize;
-let q=dlpvalloc(4096) as usize;
-// Consecutive allocations do not guarantee them to be adjacent.
-assert_eq!(q-p,8192);
-```
+This repository is published to [crates.io](https://crates.io/crates/portable-dlmalloc). \
+You may add this crate in your `no_std` projects.
 
 ## Port To Your Platform
 To port `dlmalloc` to your platform, implement the following procedures:
@@ -61,16 +20,9 @@ To port `dlmalloc` to your platform, implement the following procedures:
 	void* custom_mmap(size_t length);
 	int custom_munmap(void* ptr,size_t length);
 	```
-	```Rust
-	#[no_mangle] unsafe extern "C" custom_mmap(length:usize)->*mut c_void;
-	#[no_mangle] unsafe extern "C" custom_munmap(ptr:*mut c_void,length:usize)->i32;
- 	```
 - `custom_direct_mmap`: Extend the allocated pages. This is optional. Return `(void*)-1` to indicate failure/no-support.
 	```C
 	void* custom_direct_mmap(size_t length);
-	```
-	```Rust
-	#[no_mangle] unsafe extern "C" custom_mmap(length:usize)->*mut c_void;
 	```
 - `init_lock`/`final_lock`/`acquire_lock`/`release_lock`: Implement thread-safety for `dlmalloc`. The minimal implementation can be a simple spinlock. You can leave the implementations empty for this set of routines if you do not need thread-safety.
 	```C
@@ -79,18 +31,9 @@ To port `dlmalloc` to your platform, implement the following procedures:
 	void acquire_lock(void* *lock);	// Acquire the mutex.
 	void release_lock(void* *lock);	// Release the mutex.
 	```
-	```Rust
-	#[no_mangle] unsafe extern "C" init_lock(lock:*mut *mut c_void);	// Initialize the mutex.
-	#[no_mangle] unsafe extern "C" final_lock(lock:*mut *mut c_void);	// Finalize the mutex.
-	#[no_mangle] unsafe extern "C" acquire_lock(lock:*mut *mut c_void);	// Acquire the mutex.
-	#[no_mangle] unsafe extern "C" release_lock(lock:*mut *mut c_void);	// Release the mutex.
-	```
 - `custom_abort`: Implement `abort()` routine. `dlmalloc` calls `custom_abort()` when internal assertion fails. You may use panic here.
 	```C
 	void custom_abort(void);
-	```
-	```Rust
-	#[no_mangle] unsafe extern "C" custom_abort()->!;
 	```
 - `dprintf2`: Implement debug-printer, which can trace file-name and line-numbers, for `dlmalloc`. Note that the format specifiers are implementation-specific. For example, you might have to use `%a` to print ASCII-strings in EDK2. You do not have to implement `dprintf2` if you won't debug `malloc.c`.
 	```C
@@ -98,7 +41,6 @@ To port `dlmalloc` to your platform, implement the following procedures:
 	```
 	If you need to print stuff in `malloc.c` codes, just use the `dprintf` macro.
 
-	If you use `portable-dlmalloc` crate, do not implement this routine.
 - `memcpy`/`memset`: I suppose no explanations are needed for these two. `dlmalloc` uses these two routines, but they can be easily implemented. Some embedded SDKs may even include `memcpy`/`memset`, though they might not have `malloc`.
 
 When you compile `malloc.c`, define the following preprocessor flags:
