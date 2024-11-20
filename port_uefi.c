@@ -47,16 +47,6 @@ void* custom_direct_mmap(size_t length)
 	return (void*)-1;
 }
 
-void* memcpy(void* dest,void* src,size_t cb)
-{
-	return CopyMem(dest,src,cb);
-}
-
-void* memset(void* dest,size_t cb,char v)
-{
-	return SetMem(dest,cb,v);
-}
-
 #define LOCK_IS_FREE	(void*)0
 #define LOCK_IN_USE		(void*)1
 
