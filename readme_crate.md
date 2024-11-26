@@ -18,12 +18,42 @@ Then you will be able to use `alloc` crate.
 extern crate alloc;
 ```
 
-The default alignment of `dlmalloc` is twice the pointer size (e.g.: 16 bytes on 64-bit systems). \
-If you need to use a different alignment, use `dlmemalign` function to implement your [`GlobalAlloc` trait](https://doc.rust-lang.org/alloc/alloc/trait.GlobalAlloc.html).
+The default alignment of `alloc` trait method automatically determines the required alignment. \
+If you need to use a different alignment for some specific reasons, use `dlmemalign` function to implement your [`GlobalAlloc` trait](https://doc.rust-lang.org/alloc/alloc/trait.GlobalAlloc.html).
 
 ### Alternate Allocator
-The [Allocator Trait](https://doc.rust-lang.org/alloc/alloc/trait.Allocator.html) is currently nightly-only. \
-Currently, this crate does not support this trait.
+The [Allocator Trait](https://doc.rust-lang.org/alloc/alloc/trait.Allocator.html) is currently nightly-only. You are required to use a nightly rust compiler in order to use this feature. \
+To use alternate alloactor, you will have to declare that your crate uses `allocator_api`:
+```Rust
+#![feature(allocator_api)]
+```
+To use alternate allocator, you need to create an allocator:
+```Rust
+use portable_dlmalloc::AltAlloc;
+
+let a=AltAlloc::new(0,false);
+{
+	let ap:Box::<u32,AltAlloc>=Box::new_in(123,a);
+	println!("{:p} | {}",&raw const *ap,ap);
+	// ap will be automatically dropped here.
+	// This is why "ap" is created in a brace.
+	// Otherwise, you need to manually call "drop" function before you destroy the allocator.
+}
+// Drop everything before you destroy the allocator!
+a.destroy();
+```
+Please note that alternate allocator is a nightly-only API. If Rust removes this feature in future, this feature will be removed from this crate as well.
+
+**Caveat**: You must ensure all allocations are dropped before destroying the alternate allocator!
+
+**Personal Throughts**: Allocator APIs should borrow the allocator objects. In other words, it should be like:
+```Rust
+let a=AltAlloc::new(0,false);
+let ap:Box::<u32,AltAlloc>=Box::new_in(123,&a);
+let aq:Box::<u64,AltAlloc>=Box::new_in(321,&a);
+```
+In this case, `AltAlloc` can implement `Drop` trait, and `a`, `ap`, `aq` can be dropped properly and automatically with RAII rule. \
+Current implementation of `AltAlloc` has to implement `Copy` trait in order to allow multiple allocations within a single alternate allocator.
 
 ### Raw FFI
 The `raw` module from this crate exports FFI bindings for `dlmalloc` library.
@@ -79,8 +109,10 @@ If your target is somewhat unorthodox, you need to set environment variables bef
 
 - `CC`: This environment variable specifies which compiler executable should be used to compile `malloc.c`
 - `AR`: This environment variable specifies which archiver executable should be used to archive this crate into a static library.
+- `CFLAGS`: This environment variable specifies additional flags to the compiler. You might need this flag to add debug information (e.g.: `-g`)
 
-If `cc` crate does not know how to invoke your compiler and/or archiver, you should write a script to emulate `cc` and/or `ar`.
+If `cc` crate does not know how to invoke your compiler and/or archiver, you should write a script to emulate `cc` and/or `ar`. \
+In most circumstances, setting `CC` to `clang` and `AR` to `llvm-ar` should work well.
 
 ## License
 This crate is under the [MIT license](./license.txt).

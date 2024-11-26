@@ -1,12 +1,21 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>
+#include <string.h>
 #include <Windows.h>
 
 void* dlmalloc(size_t length);
 void* dlcalloc(size_t n_elements,size_t element_size);
 void* dlrealloc(void* ptr,size_t length);
 void dlfree(void* ptr);
+
+typedef void* mspace;
+
+mspace create_mspace(size_t capacity, int locked);
+size_t destroy_mspace(mspace msp);
+void* mspace_malloc(mspace msp, size_t bytes);
+void mspace_free(mspace msp, void* mem);
+void* mspace_memalign(mspace msp, size_t alignment, size_t bytes);
 
 void* custom_mmap(size_t length)
 {
@@ -65,7 +74,7 @@ void release_lock(void** lock)
 	ReleaseSRWLockExclusive((PSRWLOCK)lock);
 }
 
-int main(int argc,char* argv[],char* envp[])
+void test_dlmalloc()
 {
 	void* ptr=dlmalloc(0x401000);
 	void *p1=dlmalloc(5),*p2=dlmalloc(0x1FFFFF);
@@ -73,5 +82,29 @@ int main(int argc,char* argv[],char* envp[])
 	dlfree(ptr);
 	dlfree(p1);
 	dlfree(p2);
+}
+
+void test_mspace()
+{
+	mspace ms=create_mspace(0,0);
+	if(ms)
+	{
+		void* p1=mspace_malloc(ms,5555555);
+		printf("mspace: 0x%p\n",ms);
+		printf("p1: 0x%p\n",p1);
+		mspace_free(ms,p1);
+		destroy_mspace(ms);
+	}
+}
+
+int main(int argc,char* argv[],char* envp[])
+{
+	if(argc>1)
+	{
+		if(strcmp(argv[1],"mspace")==0)
+			test_mspace();
+		else
+			test_dlmalloc();
+	}
 	return 0;
 }

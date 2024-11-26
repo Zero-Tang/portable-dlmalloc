@@ -1,6 +1,8 @@
 // Rust example for using portable dlmalloc
+#![feature(allocator_api)]
+
 use core::fmt;
-use portable_dlmalloc::DLMalloc;
+use portable_dlmalloc::{AltAlloc, DLMalloc};
 
 #[cfg(target_os="windows")] mod win;
 
@@ -11,11 +13,15 @@ struct FormatBuffer
 	used:usize
 }
 
-impl FormatBuffer
+impl Default for FormatBuffer
 {
-	fn new()->Self
+	fn default() -> Self
 	{
-		FormatBuffer{buffer:[0;512],used:0}
+		Self
+		{
+			buffer:[0;512],
+			used:0
+		}
 	}
 }
 
@@ -31,7 +37,7 @@ impl fmt::Write for FormatBuffer
 		}
 		remainder[..current.len()].copy_from_slice(current);
 		self.used+=current.len();
-		return Ok(());
+		Ok(())
 	}
 }
 
@@ -57,10 +63,39 @@ impl fmt::Write for FormatBuffer
 
 #[global_allocator] static GLOBAL_ALLOCATOR:DLMalloc=DLMalloc;
 
+#[derive(Debug)]
+#[repr(C,align(0x400))] struct AlignedHigher
+{
+	a:u8,
+	b:u16,
+	c:u32
+}
+
 fn main()
 {
 	let p:Box<u32>=Box::new(55);
+	let q:Box<AlignedHigher>=Box::new(AlignedHigher{a:4,b:555,c:6666666});
 	let mut v:Vec<u32>=vec![5,4,1,6,3,8,9];
 	v.sort();
-	println!("Hello, world! {}\n{v:?}",p);
+	println!("Hello, world! {}\n{v:?}\n{q:?}",p);
+	println!("{:p} {:p} {:p}",&raw const *p,v.as_ptr(),&raw const *q);
+	let pp=&raw const *p;
+	let pq=&raw const *q;
+	// Verify the alignment.
+	assert_eq!(pp as usize & (align_of::<u32>()-1),0);
+	assert_eq!(pq as usize & (align_of::<AlignedHigher>()-1),0);
+	// Try allocator API.
+	let a=AltAlloc::new(0,false);
+	{
+		let ab:Box::<u32,AltAlloc>=Box::new_in(4,a);
+		println!("{:p} | {}",&raw const *ab,ab);
+		let mut av:Vec::<u32,AltAlloc>=Vec::new_in(a);
+		for i in v
+		{
+			av.push(i);
+		}
+		println!("{:p} | {:?}",av.as_ptr(),av);
+	}
+	// Drop everything before destroying the allocator!
+	a.destroy();
 }

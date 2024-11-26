@@ -9,7 +9,7 @@ set objpath=.\bin\compfre_win11x64\Intermediate
 if not exist %objpath% (mkdir %objpath%)
 
 echo Compiling dlmalloc...
-cl malloc.c /I"%incpath%\ucrt" /I"%ddkpath%\include" /D"PORTABLE" /D"USE_DL_PREFIX" /D"NO_MALLOC_STATS=1" /D"USE_LOCKS=2" /Zi /nologo /W3 /WX /O2 /Zc:wchar_t /FAcs /Fa"%objpath%\malloc.cod" /Fo"%objpath%\malloc.obj" /Fd"%objpath%\vc140.pdb" /GS- /std:c17 /Qspectre /TC /c /errorReport:queue
+cl malloc.c /I"%incpath%\ucrt" /I"%ddkpath%\include" /D"PORTABLE" /D"USE_DL_PREFIX" /D"NO_MALLOC_STATS=1" /D"USE_LOCKS=2" /D"MSPACES" /Zi /nologo /W3 /WX /O2 /Zc:wchar_t /FAcs /Fa"%objpath%\malloc.cod" /Fo"%objpath%\malloc.obj" /Fd"%objpath%\vc140.pdb" /GS- /std:c17 /Qspectre /TC /c /errorReport:queue
 
 lib "%objpath%\malloc.obj" /NOLOGO /OUT:"%binpath%\dlmalloc.lib" /Machine:X64 /ERRORREPORT:QUEUE
 

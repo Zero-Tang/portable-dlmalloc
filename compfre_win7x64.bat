@@ -9,7 +9,7 @@ set objpath=.\bin\compfre_win7x64\Intermediate
 if not exist %objpath% (mkdir %objpath%)
 
 echo Compiling dlmalloc...
-cl .\malloc.c /I"%incpath%\crt" /I"%incpath%\api" /D"WIN32" /D"USE_DL_PREFIX" /D"NO_MALLOC_STATS=1" /D"USE_LOCKS=1" /Zi /nologo /W3 /WX /O2 /Zc:wchar_t /FAcs /Fa"%objpath%\malloc.cod" /Fo"%objpath%\malloc.obj" /Fd"%objpath%\vc90.pdb" /GS- /Gy /TC /c /errorReport:queue
+cl .\malloc.c /I"%incpath%\crt" /I"%incpath%\api" /D"WIN32" /D"USE_DL_PREFIX" /D"NO_MALLOC_STATS=1" /D"USE_LOCKS=1" /D"MSPACES" /Zi /nologo /W3 /WX /O2 /Zc:wchar_t /FAcs /Fa"%objpath%\malloc.cod" /Fo"%objpath%\malloc.obj" /Fd"%objpath%\vc90.pdb" /GS- /Gy /TC /c /errorReport:queue
 
 link "%objpath%\malloc.obj" /LIBPATH:"%libpath%\win7\amd64" /LIBPATH:"%libpath%\Crt\amd64" /NODEFAULTLIB "kernel32.lib" "msvcrt.lib" /NOLOGO /INCREMENTAL:NO /OPT:ICF /OPT:REF /DEBUG /DEF:"export.def" /PDB:"%binpath%\dlmalloc.pdb" /OUT:"%binpath%\dlmalloc.dll" /NOENTRY /SUBSYSTEM:WINDOWS /DLL /Machine:X64 /ERRORREPORT:QUEUE
 

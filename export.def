@@ -25,3 +25,21 @@ EXPORTS
 	dlfree @21
 	dlmalloc @22
 	dlrealloc @23
+
+	create_mspace @24
+	destroy_mspace @25
+	create_mspace_with_base @26
+	mspace_track_large_chunks @27
+	mspace_malloc @28
+	mspace_free @29
+	mspace_realloc @30
+	mspace_calloc @31
+	mspace_memalign @32
+	mspace_independent_calloc @33
+	mspace_independent_comalloc @34
+	mspace_footprint @35
+	mspace_max_footprint @36
+	mspace_mallinfo @37
+	mspace_usable_size @38
+	mspace_trim @39
+	mspace_mallopt @40

@@ -8,9 +8,9 @@ use crate::{FormatBuffer,naprint};
 
 pub fn system_print(args:fmt::Arguments)
 {
-	let mut w=FormatBuffer::new();
+	let mut w=FormatBuffer::default();
 	let r=fmt::write(&mut w,args);
-	if let Ok(_)=r
+	if r.is_ok()
 	{
 		let b=&w.buffer;
 		let r=unsafe{GetStdHandle(STD_OUTPUT_HANDLE)};
@@ -33,7 +33,7 @@ pub fn system_print(args:fmt::Arguments)
 {
 	let p=VirtualAlloc(None, length, MEM_COMMIT, PAGE_READWRITE);
 	naprint!("[mmap] page: {:p}, length: 0x{:X}\n",p,length);
-	if p==null_mut() {null_mut::<u8>().sub(1).cast()} else {p}
+	if p.is_null() {null_mut::<u8>().sub(1).cast()} else {p}
 }
 
 #[no_mangle] unsafe extern "C" fn custom_munmap(ptr:*mut c_void,length:usize)->i32
@@ -52,25 +52,25 @@ pub fn system_print(args:fmt::Arguments)
 	null_mut::<u8>().sub(1).cast()
 }
 
-#[no_mangle] unsafe extern "C" fn init_lock(lock:*mut SRWLOCK)->()
+#[no_mangle] unsafe extern "C" fn init_lock(lock:*mut SRWLOCK)
 {
 	naprint!("[lock] initializing lock...\n");
 	*lock=SRWLOCK_INIT;
 }
 
-#[no_mangle] unsafe extern "C" fn acquire_lock(lock:*mut SRWLOCK)->()
+#[no_mangle] unsafe extern "C" fn acquire_lock(lock:*mut SRWLOCK)
 {
 	naprint!("[lock] acquiring lock...\n");
 	AcquireSRWLockExclusive(lock);
 }
 
-#[no_mangle] unsafe extern "C" fn release_lock(lock:*mut SRWLOCK)->()
+#[no_mangle] unsafe extern "C" fn release_lock(lock:*mut SRWLOCK)
 {
 	naprint!("[lock] releasing lock...\n");
 	ReleaseSRWLockExclusive(lock);
 }
 
-#[no_mangle] unsafe extern "C" fn final_lock(_lock:*mut SRWLOCK)->()
+#[no_mangle] unsafe extern "C" fn final_lock(_lock:*mut SRWLOCK)
 {
 	// SRWLock requires no finalization.
 }
