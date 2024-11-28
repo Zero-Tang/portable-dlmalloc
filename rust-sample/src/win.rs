@@ -1,10 +1,39 @@
 // Rust example for using portable dlmalloc
 use core::{fmt,ffi::c_void};
-use std::{process::abort,ptr::null_mut};
+use std::{alloc::GlobalAlloc, process::abort, ptr::null_mut};
 
 use windows::Win32::System::{Memory::*,Threading::*,Console::*};
 
-use crate::{FormatBuffer,naprint};
+use crate::{naprint, naprintln, FormatBuffer};
+
+pub struct SysAlloc;
+
+unsafe impl GlobalAlloc for SysAlloc
+{
+	unsafe fn alloc(&self, layout: std::alloc::Layout) -> *mut u8
+	{
+		naprintln!("[alloc] size: {} bytes, alignment: {} bytes",layout.size(),layout.align());
+		HeapAlloc(GetProcessHeap().unwrap(),HEAP_FLAGS(0),layout.size()).cast()
+	}
+
+	unsafe fn dealloc(&self, ptr: *mut u8, _layout: std::alloc::Layout)
+	{
+		naprintln!("[free] ptr: 0x{ptr:p}");
+		let _=HeapFree(GetProcessHeap().unwrap(),HEAP_FLAGS(0),Some(ptr.cast()));
+	}
+
+	unsafe fn alloc_zeroed(&self, layout: std::alloc::Layout) -> *mut u8
+	{
+		naprintln!("[alloc-zeroed] size: {} bytes, alignment: {} bytes",layout.size(),layout.align());
+		HeapAlloc(GetProcessHeap().unwrap(),HEAP_ZERO_MEMORY,layout.size()).cast()
+	}
+
+	unsafe fn realloc(&self, ptr: *mut u8, layout: std::alloc::Layout, new_size: usize) -> *mut u8
+	{
+		naprintln!("[realloc] ptr: {ptr:p} size: {} bytes, alignment: {} bytes",layout.size(),layout.align());
+		HeapReAlloc(GetProcessHeap().unwrap(),HEAP_FLAGS(0),Some(ptr.cast()),new_size).cast()
+	}
+}
 
 pub fn system_print(args:fmt::Arguments)
 {
@@ -54,19 +83,19 @@ pub fn system_print(args:fmt::Arguments)
 
 #[no_mangle] unsafe extern "C" fn init_lock(lock:*mut SRWLOCK)
 {
-	naprint!("[lock] initializing lock...\n");
+	naprint!("[lock] initializing lock {lock:p}...\n");
 	*lock=SRWLOCK_INIT;
 }
 
 #[no_mangle] unsafe extern "C" fn acquire_lock(lock:*mut SRWLOCK)
 {
-	naprint!("[lock] acquiring lock...\n");
+	naprint!("[lock] acquiring lock {lock:p}...\n");
 	AcquireSRWLockExclusive(lock);
 }
 
 #[no_mangle] unsafe extern "C" fn release_lock(lock:*mut SRWLOCK)
 {
-	naprint!("[lock] releasing lock...\n");
+	naprint!("[lock] releasing lock {lock:p}...\n");
 	ReleaseSRWLockExclusive(lock);
 }
 

@@ -7,6 +7,8 @@ Portable Fork of Doug Lea's `malloc` Implementation for Rust.
 You may use this [crate](https://crates.io/crates/portable-dlmalloc) to help you make a portable global allocator. \
 You will have to implement the eight C functions as described in [Port To Your Platform](#port-to-your-platform) chapter.
 
+`dlmalloc` guarantees the alignment of allocation in comparison to just some wrappers on `malloc` functions (e.g.: wrapping `HeapAlloc` in Windows). If your structure is defined to be aligned on a big alignment (e.g.: 1024 bytes), this allocator guarantees the returned pointer if aligned on your specific boundary.
+
 ### Global Allocator
 To use this crate as your global allocator:
 ```Rust
@@ -27,6 +29,12 @@ To use alternate alloactor, you will have to declare that your crate uses `alloc
 ```Rust
 #![feature(allocator_api)]
 ```
+You also need to enable `alt-alloc` in `Cargo.toml` section:
+```toml
+[dependencies.portable-dlmalloc]
+version = "0.2.1"
+features = ["alt-alloc"]
+```
 To use alternate allocator, you need to create an allocator:
 ```Rust
 use portable_dlmalloc::AltAlloc;
@@ -35,25 +43,28 @@ let a=AltAlloc::new(0,false);
 {
 	let ap:Box::<u32,AltAlloc>=Box::new_in(123,a);
 	println!("{:p} | {}",&raw const *ap,ap);
-	// ap will be automatically dropped here.
+	// "ap" will be automatically dropped here as "ap"'s lifetime will end at the end of the scope.
 	// This is why "ap" is created in a brace.
 	// Otherwise, you need to manually call "drop" function before you destroy the allocator.
 }
-// Drop everything before you destroy the allocator!
+// Make sure you have dropped everything you allocated from this allocator before you destroy this allocator!
 a.destroy();
 ```
 Please note that alternate allocator is a nightly-only API. If Rust removes this feature in future, this feature will be removed from this crate as well.
 
 **Caveat**: You must ensure all allocations are dropped before destroying the alternate allocator!
 
-**Personal Throughts**: Allocator APIs should borrow the allocator objects. In other words, it should be like:
+**Personal Throughts**: The Rust's Allocator APIs should borrow the allocator objects before it's stablized. In other words, it should be like:
 ```Rust
 let a=AltAlloc::new(0,false);
 let ap:Box::<u32,AltAlloc>=Box::new_in(123,&a);
 let aq:Box::<u64,AltAlloc>=Box::new_in(321,&a);
 ```
 In this case, `AltAlloc` can implement `Drop` trait, and `a`, `ap`, `aq` can be dropped properly and automatically with RAII rule. \
-Current implementation of `AltAlloc` has to implement `Copy` trait in order to allow multiple allocations within a single alternate allocator.
+Current implementation of `AltAlloc` has to implement `Copy` trait in order to allow multiple allocations within a single alternate allocator. \
+In summary, I believe:
+- `Allocator` trait should reject the `Copy` trait.
+- `Allocator` trait should require the `Drop` trait.
 
 ### Raw FFI
 The `raw` module from this crate exports FFI bindings for `dlmalloc` library.

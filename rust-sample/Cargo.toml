@@ -5,6 +5,7 @@ edition = "2021"
 
 [dependencies.portable-dlmalloc]
 path = ".."
+features = ["alt-alloc"]
 
 [dependencies.windows]
 version="0.58.0"
