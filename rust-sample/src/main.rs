@@ -86,18 +86,17 @@ fn main()
 	// Verify the alignment.
 	assert_eq!(pp as usize & (align_of::<u32>()-1),0);
 	assert_eq!(pq as usize & (align_of::<AlignedHigher>()-1),0);
+	naprintln!("Testing allocator API...");
 	// Try allocator API.
-	let a=AltAlloc::new(0,true);
+	let a=AltAlloc::new(0x300000,true);
+	let ab:Box::<u32,&AltAlloc>=Box::new_in(4,&a);
+	naprintln!("{:p} | {}",&raw const *ab,ab);
+	let mut av:Vec::<u32,&AltAlloc>=Vec::new_in(&a);
+	for i in v
 	{
-		let ab:Box::<u32,AltAlloc>=Box::new_in(4,a);
-		naprintln!("{:p} | {}",&raw const *ab,ab);
-		let mut av:Vec::<u32,AltAlloc>=Vec::new_in(a);
-		for i in v
-		{
-			av.push(i);
-		}
-		naprintln!("{:p} | {:?}",av.as_ptr(),av);
+		av.push(i);
 	}
-	// Drop everything before destroying the allocator!
-	unsafe{a.destroy();}
+	naprintln!("av1: {:p} | {:?}",av.as_ptr(),av);
+	let av2:Vec::<u8,&AltAlloc>=Vec::with_capacity_in(0x300000,&a);
+	naprintln!("av2: {:p} | {:?}",av2.as_ptr(),av2);
 }
