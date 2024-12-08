@@ -1,6 +1,6 @@
 // Rust example for using portable dlmalloc
 use core::{fmt,ffi::c_void};
-use std::{alloc::GlobalAlloc, process::abort, ptr::null_mut};
+use std::{alloc::GlobalAlloc, ptr::null_mut};
 
 use windows::Win32::System::{Memory::*,Threading::*,Console::*};
 
@@ -52,12 +52,6 @@ pub fn system_print(args:fmt::Arguments)
 }
 
 // Implement required port routines for dlmalloc
-#[no_mangle] extern "C" fn custom_abort()->!
-{
-	naprint!("The dlmalloc library executed abort!\n");
-	abort()
-}
-
 #[no_mangle] unsafe extern "C" fn custom_mmap(length:usize)->*mut c_void
 {
 	let p=VirtualAlloc(None, length, MEM_COMMIT, PAGE_READWRITE);
@@ -74,11 +68,6 @@ pub fn system_print(args:fmt::Arguments)
 		Ok(_)=>0,
 		Err(_)=>-1
 	}
-}
-
-#[no_mangle] unsafe extern "C" fn custom_direct_mmap(_length:usize)->*mut c_void
-{
-	null_mut::<u8>().sub(1).cast()
 }
 
 #[no_mangle] unsafe extern "C" fn init_lock(lock:*mut SRWLOCK)
@@ -99,7 +88,8 @@ pub fn system_print(args:fmt::Arguments)
 	ReleaseSRWLockExclusive(lock);
 }
 
-#[no_mangle] unsafe extern "C" fn final_lock(_lock:*mut SRWLOCK)
+#[no_mangle] unsafe extern "C" fn final_lock(lock:*mut SRWLOCK)
 {
 	// SRWLock requires no finalization.
+	naprint!("[lock] finalizing lock {lock:p}...\n");
 }

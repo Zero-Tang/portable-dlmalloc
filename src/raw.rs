@@ -19,7 +19,7 @@ pub const M_MMAP_THRESHOLD:i32=-3;
 	pub smblks:usize,
 	/// always 0
 	pub hblks:usize,
-	/// space in mmapped regions
+	/// space in `mmap`ed regions
 	pub hblkhd:usize,
 	/// maximum total allocated space
 	pub usmblks:usize,
@@ -29,7 +29,7 @@ pub const M_MMAP_THRESHOLD:i32=-3;
 	pub uordblks:usize,
 	/// total free space
 	pub fordblks:usize,
-	/// releaseable (via malloc_trim space)
+	/// releaseable (via `malloc_trim` space)
 	pub keepcost:usize
 }
 

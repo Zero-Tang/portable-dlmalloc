@@ -24,6 +24,23 @@ The default alignment of `alloc` trait method automatically determines the requi
 
 Your `custom_mmap` implementation must track all allocated pages so that you can release pages in shared address-space (e.g.: DLL in Windows, SO in Linux).
 
+### Mspace Allocator
+You can also use `MspaceAlloc` as your global allocator:
+```Rust
+use portable_dlmalloc:MspaceAlloc;
+#[global_allocator] static GLOBAL_ALLOCATOR:MspaceAlloc=MspaceAlloc::new(0);
+```
+To destroy this allocator:
+```Rust
+unsafe
+{
+	GLOBAL_ALLOCATOR.destroy();
+}
+```
+Use this allocator only if:
+- You need a specific initial capacity bigger than default granularity.
+- You need to destroy the allocator in one-shot, without tracing all allocated pages.
+
 ### Alternate Allocator
 The [Allocator Trait](https://doc.rust-lang.org/alloc/alloc/trait.Allocator.html) is currently nightly-only. You are required to use a nightly rust compiler in order to use this feature. \
 To use alternate alloactor, you will have to declare that your crate uses `allocator_api`:
@@ -33,7 +50,7 @@ To use alternate alloactor, you will have to declare that your crate uses `alloc
 You also need to enable `alt-alloc` in `Cargo.toml` section:
 ```toml
 [dependencies.portable-dlmalloc]
-version = "0.2.2"
+version = "0.3.0"
 features = ["alt-alloc"]
 ```
 To use alternate allocator, you need to create an allocator using a reference to `AltAlloc`:

@@ -31,7 +31,9 @@ impl AltAlloc
 	/// This method will use existing `base` to create a new `AltAlloc` allocator. No allocations are made on creation. \
 	/// Other arguments mean the same as `new` method.
 	/// 
-	/// Note that `AltAlloc` created from the `from_base` method does not automatically release the base.
+	/// Note that `AltAlloc` created from the `from_base` method does not automatically release the base. \
+	/// When dropping `AltAlloc`, the expanded parts will be automatically released. \
+	/// However, it is your responsibility to release the `base`.
 	/// 
 	/// ## Safety
 	/// This method assumes the `base` is valid.

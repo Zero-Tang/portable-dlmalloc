@@ -1,7 +1,7 @@
 // Rust example for using portable dlmalloc
 #![feature(allocator_api)]
 
-use core::fmt;
+use core::{fmt,ptr::null_mut,ffi::c_void};
 use portable_dlmalloc::{alt_alloc::AltAlloc, DLMalloc};
 
 #[cfg(target_os="windows")] mod win;
@@ -71,6 +71,16 @@ impl fmt::Write for FormatBuffer
 	a:u8,
 	b:u16,
 	c:u32
+}
+
+#[no_mangle] extern "C" fn custom_abort()->!
+{
+	panic!("The dlmalloc library executed abort!\n");
+}
+
+#[no_mangle] unsafe extern "C" fn custom_direct_mmap(_length:usize)->*mut c_void
+{
+	null_mut::<u8>().sub(1).cast()
 }
 
 fn main()
