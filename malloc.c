@@ -1513,7 +1513,7 @@ int dprintf2(const char* src_fn,const int src_ln,const char* format,...);
 #ifndef LACKS_UNISTD_H
 #include <unistd.h>     /* for sbrk, sysconf */
 #else /* LACKS_UNISTD_H */
-#if !defined(__FreeBSD__) && !defined(__OpenBSD__) && !defined(__NetBSD__)
+#if !defined(__FreeBSD__) && !defined(__OpenBSD__) && !defined(__NetBSD__) && !defined(PORTABLE)
 extern void*     sbrk(ptrdiff_t);
 #endif /* FreeBSD etc */
 #endif /* LACKS_UNISTD_H */
@@ -1670,6 +1670,9 @@ unsigned char _BitScanReverse(unsigned long *index, unsigned long mask);
 void* custom_mmap(size_t length);
 int custom_munmap(void* ptr,size_t length);
 void* custom_direct_mmap(size_t length);
+
+void* memcpy(void* dest,const void* src,size_t count);
+void* memset(void* dest,int c,size_t count);
 
 #define MMAP_DEFAULT(s)		custom_mmap(s)
 #define MUNMAP_DEFAULT(a,s)	custom_munmap(a,s)
@@ -2920,7 +2923,7 @@ static size_t traverse_and_check(mstate m);
 	I = NTREEBINS-1;\
   else {\
 	unsigned int K;\
-	_BitScanReverse((unsigned __int32 *) &K, (unsigned __int32) X);\
+	_BitScanReverse((unsigned long *) &K, (unsigned __int32) X);\
 	I =  (bindex_t)((K << 1) + ((S >> (K + (TREEBIN_SHIFT-1)) & 1)));\
   }\
 }
@@ -3005,7 +3008,7 @@ static size_t traverse_and_check(mstate m);
 #define compute_bit2idx(X, I)\
 {\
   unsigned int J;\
-  _BitScanForward((unsigned __int32 *) &J, X);\
+  _BitScanForward((unsigned long *) &J, X);\
   I = (bindex_t)J;\
 }
 
@@ -4128,7 +4131,8 @@ static void* sys_alloc(mstate m, size_t nb) {
    not on boundary, and round this up to a granularity unit.
   */
 
-  if (MORECORE_CONTIGUOUS && !use_noncontiguous(m)) {
+#if MORECORE_CONTIGUOUS
+  if (!use_noncontiguous(m)) {
 	char* br = CMFAIL;
 	size_t ssize = asize; /* sbrk call size */
 	msegmentptr ss = (m->top == 0)? 0 : segment_holding(m, (char*)m->top);
@@ -4188,6 +4192,7 @@ static void* sys_alloc(mstate m, size_t nb) {
 
 	RELEASE_MALLOC_GLOBAL_LOCK();
   }
+#endif
 
   if (HAVE_MMAP && tbase == CMFAIL) {  /* Try MMAP */
 	char* mp = (char*)(CALL_MMAP(asize));
@@ -4198,7 +4203,8 @@ static void* sys_alloc(mstate m, size_t nb) {
 	}
   }
 
-  if (HAVE_MORECORE && tbase == CMFAIL) { /* Try noncontiguous MORECORE */
+#if HAVE_MORECORE
+  if (tbase == CMFAIL) { /* Try noncontiguous MORECORE */
 	if (asize < HALF_MAX_SIZE_T) {
 	  char* br = CMFAIL;
 	  char* end = CMFAIL;
@@ -4215,6 +4221,7 @@ static void* sys_alloc(mstate m, size_t nb) {
 	  }
 	}
   }
+#endif	/* HAVE_MORECORE */
 
   if (tbase != CMFAIL) {
 

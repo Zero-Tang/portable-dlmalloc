@@ -22,7 +22,8 @@ extern crate alloc;
 
 The default alignment of `alloc` trait method automatically determines the required alignment.
 
-Your `custom_mmap` implementation must track all allocated pages so that you can release pages in shared address-space (e.g.: DLL in Windows, SO in Linux).
+Your `custom_mmap` implementation must track all allocated pages so that you can release pages in shared address-space (e.g.: DLL in Windows, SO in Linux). \
+The `final_lock` routine will not be called for the global allocator! Your `init_lock` implementation must track all initialized locks so that you can finalize all locks, unless it is trivial to finalize the locks.
 
 ### Mspace Allocator
 You can also use `MspaceAlloc` as your global allocator:
@@ -50,7 +51,7 @@ To use alternate alloactor, you will have to declare that your crate uses `alloc
 You also need to enable `alt-alloc` in `Cargo.toml` section:
 ```toml
 [dependencies.portable-dlmalloc]
-version = "0.3.0"
+version = "0.3.1"
 features = ["alt-alloc"]
 ```
 To use alternate allocator, you need to create an allocator using a reference to `AltAlloc`:
@@ -96,9 +97,11 @@ To port `dlmalloc` to your platform, implement the following procedures:
 	#[no_mangle] unsafe extern "C" custom_mmap(length:usize)->*mut c_void;
 	#[no_mangle] unsafe extern "C" custom_munmap(ptr:*mut c_void,length:usize)->i32;
 	```
+	Hint: If you are in baremetal environment without `mmap`-like services like outdated embedded systems, you can just return the pointer to the free memory. \
+	Note: This crate does not support `sbrk`, even though original implementation of `dlmalloc` supports it. Just emulate the behavior of `mmap` with `sbrk`.
 - `custom_direct_mmap`: Extend the allocated pages. This is optional. Return `(void*)-1` to indicate failure/no-support.
 	```Rust
-	#[no_mangle] unsafe extern "C" custom_mmap(length:usize)->*mut c_void;
+	#[no_mangle] unsafe extern "C" custom_direct_mmap(length:usize)->*mut c_void;
 	```
 - `init_lock`/`final_lock`/`acquire_lock`/`release_lock`: Implement thread-safety for `dlmalloc`. The minimal implementation can be a simple spinlock. You can leave the implementations empty for this set of routines if you do not need thread-safety. \
 	The exact type of `lock` depends on your implementation. It can be `*mut T` where T can be anything that has the size of a pointer.
@@ -112,7 +115,10 @@ To port `dlmalloc` to your platform, implement the following procedures:
 	```Rust
 	#[no_mangle] unsafe extern "C" custom_abort()->!;
 	```
-- `memcpy`/`memset`: I suppose no explanations are needed for these two. `dlmalloc` uses these two routines, but they can be easily implemented anyway. You do not need to implement these two routines in Rust if your linker can find libraries that implement these two routines.
+- `memcpy`/`memset`: I suppose no explanations are needed for these two. `dlmalloc` uses these two routines, but they can be easily implemented anyway. You do not need to implement these two routines in Rust if your linker can find libraries that implement these two routines. Note that MSVC SDK provides source code of high-performance `memcpy` and `memset` implementations in Assembly!
+
+Note: If you are using Rust 2024 or higher, you must use `#[unsafe(no_mangle)]` as prefix! See [Rust unsafe attributes](https://doc.rust-lang.org/edition-guide/rust-2024/unsafe-attributes.html) for more details. \
+If, for some reasons, these procedure names must be reserved in your project, you may use the [`export_name` attribute](https://doc.rust-lang.org/reference/abi.html#the-export_name-attribute). Note that `export_name` attribute requires `unsafe` in Rust 2024 as well as `no_mangle`!
 
 ## Build
 Since the core of the `dlmalloc` library is written in C, a working C compiler is required. \

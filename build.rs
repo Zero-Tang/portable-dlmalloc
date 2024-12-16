@@ -8,6 +8,7 @@ fn main()
 	.define("DEFAULT_GRANULARITY","0x200000")
 	.define("NO_MALLOC_STATS","1")
 	.define("MSPACES",None)
+	.debug(true)
 	.compile("dlmalloc");
 	println!("cargo::rerun-if-changed=./malloc.c");
 }
