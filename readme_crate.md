@@ -43,28 +43,7 @@ Use this allocator only if:
 - You need to destroy the allocator in one-shot, without tracing all allocated pages.
 
 ### Alternate Allocator
-The [Allocator Trait](https://doc.rust-lang.org/alloc/alloc/trait.Allocator.html) is currently nightly-only. You are required to use a nightly rust compiler in order to use this feature. \
-To use alternate alloactor, you will have to declare that your crate uses `allocator_api`:
-```Rust
-#![feature(allocator_api)]
-```
-You also need to enable `alt-alloc` in `Cargo.toml` section:
-```toml
-[dependencies.portable-dlmalloc]
-version = "0.3.1"
-features = ["alt-alloc"]
-```
-To use alternate allocator, you need to create an allocator using a reference to `AltAlloc`:
-```Rust
-use portable_dlmalloc::AltAlloc;
-
-let a=AltAlloc::new(0,false);
-let ap:Box::<u32,&AltAlloc>=Box::new_in(123,&a);
-println!("{:p} | {}",&raw const *ap,ap);
-```
-Please note that alternate allocator is a nightly-only API. If Rust removes this feature in future, this feature will be removed from this crate as well.
-
-**Caveat**: You must use the allocator in references, as the `AltAlloc` **does not implement** `Copy` trait!
+The [Allocator Trait](https://doc.rust-lang.org/alloc/alloc/trait.Allocator.html) is currently nightly-only. Therefore, the alternate allocator feature is only available in the 0.x version of this crate. This feature will not be included in 1.x version and later until the `Allocator Trait` is stablized.
 
 ### Raw FFI
 The `raw` module from this crate exports FFI bindings for `dlmalloc` library.
@@ -122,7 +101,7 @@ If, for some reasons, these procedure names must be reserved in your project, yo
 
 ## Build
 Since the core of the `dlmalloc` library is written in C, a working C compiler is required. \
-If your target is somewhat unorthodox, you need to set environment variables before executing `cargo build`:
+If your target is somewhat unorthodox, you need to set the following environment variables before executing `cargo build`:
 
 - `CC`: This environment variable specifies which compiler executable should be used to compile `malloc.c`.
 - `AR`: This environment variable specifies which archiver executable should be used to archive this crate into a static library.

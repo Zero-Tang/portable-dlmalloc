@@ -1,5 +1,4 @@
 #![no_std]
-#![feature(allocator_api,non_null_from_ref)]
 
 use core::{alloc::*, ffi::c_void, ptr::null_mut, sync::atomic::*};
 
@@ -7,8 +6,6 @@ use core::{alloc::*, ffi::c_void, ptr::null_mut, sync::atomic::*};
 /// Use this library only if you understand the safety.
 pub mod raw;
 use raw::*;
-
-#[cfg(feature="alt-alloc")] pub mod alt_alloc;
 
 /// ## DLMalloc allocator
 /// This is the default allocator.
