@@ -579,9 +579,9 @@ MAX_RELEASE_CHECK_RATE   default: 4095 unless not HAVE_MMAP
 #define MALLOC_FAILURE_ACTION
 #endif /* MALLOC_FAILURE_ACTION */
 
-void custom_abort(void);
+void custom_abort(char* message,const char* fn,const unsigned int ln);
 
-#define ABORT custom_abort()
+#define ABORT(msg) custom_abort(msg,__FILE__,__LINE__) 
 #endif
 
 #if defined(DARWIN) || defined(_DARWIN)
@@ -640,7 +640,7 @@ void custom_abort(void);
 #define FOOTERS 0
 #endif  /* FOOTERS */
 #ifndef ABORT
-#define ABORT  abort()
+#define ABORT(msg)  abort()
 #endif  /* ABORT */
 #ifndef ABORT_ON_ASSERT_FAILURE
 #define ABORT_ON_ASSERT_FAILURE 1
@@ -1471,7 +1471,7 @@ int dprintf2(const char* src_fn,const int src_ln,const char* format,...);
 #ifdef DEBUG
 #if ABORT_ON_ASSERT_FAILURE
 #undef assert
-#define assert(x) if(!(x)) ABORT
+#define assert(x) if(!(x)) ABORT("Assertion Failed!")
 #else /* ABORT_ON_ASSERT_FAILURE */
 #include <assert.h>
 #endif /* ABORT_ON_ASSERT_FAILURE */
@@ -2830,11 +2830,11 @@ static void reset_on_error(mstate m);
 #else /* PROCEED_ON_ERROR */
 
 #ifndef CORRUPTION_ERROR_ACTION
-#define CORRUPTION_ERROR_ACTION(m) ABORT
+#define CORRUPTION_ERROR_ACTION(m) ABORT("Corruption Detected!")
 #endif /* CORRUPTION_ERROR_ACTION */
 
 #ifndef USAGE_ERROR_ACTION
-#define USAGE_ERROR_ACTION(m,p) ABORT
+#define USAGE_ERROR_ACTION(m,p) ABORT("Usage Error Detected!")
 #endif /* USAGE_ERROR_ACTION */
 
 #endif /* PROCEED_ON_ERROR */
@@ -3189,7 +3189,7 @@ static int init_mparams(void) {
 		((MCHUNK_SIZE      & (MCHUNK_SIZE-SIZE_T_ONE))      != 0) ||
 		((gsize            & (gsize-SIZE_T_ONE))            != 0) ||
 		((psize            & (psize-SIZE_T_ONE))            != 0))
-	  ABORT;
+	  ABORT("Sanity-Check Failed!");
 	mparams.granularity = gsize;
 	mparams.page_size = psize;
 	mparams.mmap_threshold = DEFAULT_MMAP_THRESHOLD;

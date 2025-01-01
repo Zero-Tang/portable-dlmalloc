@@ -1,6 +1,4 @@
 // Rust example for using portable dlmalloc
-#![feature(allocator_api)]
-
 use core::{fmt,ptr::null_mut,ffi::c_void};
 use portable_dlmalloc::DLMalloc;
 
@@ -63,7 +61,7 @@ impl fmt::Write for FormatBuffer
 }
 
 #[global_allocator] static GLOBAL_ALLOCATOR:DLMalloc=DLMalloc;
-// static SYSTEM_ALLOCATOR:SysAlloc=SysAlloc;
+// #[global_allocator] static SYSTEM_ALLOCATOR:SysAlloc=SysAlloc;
 
 #[derive(Debug)]
 #[repr(C,align(0x400))] struct AlignedHigher
@@ -73,9 +71,30 @@ impl fmt::Write for FormatBuffer
 	c:u32
 }
 
-#[no_mangle] extern "C" fn custom_abort()->!
+/// ## Safety
+/// The lifetime of the returned reference is not guaranteed to be safe. \
+/// You have to manually validate the lifetime on your own.
+unsafe fn nulstr_from_ptr<'a>(string:*const u8)->&'a str
 {
-	panic!("The dlmalloc library executed abort!\n");
+	// Check the length of string.
+	let mut s:usize=0;
+	loop
+	{
+		if string.add(s).read()==0
+		{
+			break;
+		}
+		s+=1;
+	}
+	let str_slice=core::slice::from_raw_parts(string,s);
+	core::str::from_utf8(str_slice).unwrap()
+}
+
+#[no_mangle] extern "C" fn custom_abort(message:*const u8,src_file:*const u8,src_line:u32)->!
+{
+	let msg=unsafe{nulstr_from_ptr(message)};
+	let sfn=unsafe{nulstr_from_ptr(src_file)};
+	panic!("The dlmalloc library executed abort! Reason: {msg}\n{sfn}@{src_line}");
 }
 
 #[no_mangle] unsafe extern "C" fn custom_direct_mmap(_length:usize)->*mut c_void

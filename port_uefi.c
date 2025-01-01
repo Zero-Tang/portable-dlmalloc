@@ -21,10 +21,10 @@ void* dlcalloc(size_t n_elements,size_t element_size);
 void* dlrealloc(void* ptr,size_t length);
 void dlfree(void* ptr);
 
-void custom_abort()
+void custom_abort(char* message,const char* src_fn,const unsigned int src_ln)
 {
-	StdOut->OutputString(StdOut,L"The dlmalloc library called abort!\r\n");
-	gRT->ResetSystem(EfiResetShutdown,EFI_SUCCESS,0,NULL);
+	Print(L"The dlmalloc library called abort! Reason: %s\n%s@%u",message,src_fn,src_ln);
+	CpuDeadLoop();
 }
 
 void* custom_mmap(size_t length)

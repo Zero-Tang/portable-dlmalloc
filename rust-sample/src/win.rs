@@ -1,6 +1,6 @@
 // Rust example for using portable dlmalloc
-use core::{fmt,ffi::c_void};
-use std::{alloc::GlobalAlloc, ptr::null_mut};
+use core::{fmt,ffi::c_void,ptr::null_mut};
+use std::alloc::*;
 
 use windows::Win32::System::{Memory::*,Threading::*,Console::*};
 
@@ -10,25 +10,25 @@ pub struct SysAlloc;
 
 unsafe impl GlobalAlloc for SysAlloc
 {
-	unsafe fn alloc(&self, layout: std::alloc::Layout) -> *mut u8
+	unsafe fn alloc(&self, layout: Layout) -> *mut u8
 	{
 		naprintln!("[alloc] size: {} bytes, alignment: {} bytes",layout.size(),layout.align());
 		HeapAlloc(GetProcessHeap().unwrap(),HEAP_FLAGS(0),layout.size()).cast()
 	}
 
-	unsafe fn dealloc(&self, ptr: *mut u8, _layout: std::alloc::Layout)
+	unsafe fn dealloc(&self, ptr: *mut u8, _layout: Layout)
 	{
 		naprintln!("[free] ptr: 0x{ptr:p}");
 		let _=HeapFree(GetProcessHeap().unwrap(),HEAP_FLAGS(0),Some(ptr.cast()));
 	}
 
-	unsafe fn alloc_zeroed(&self, layout: std::alloc::Layout) -> *mut u8
+	unsafe fn alloc_zeroed(&self, layout: Layout) -> *mut u8
 	{
 		naprintln!("[alloc-zeroed] size: {} bytes, alignment: {} bytes",layout.size(),layout.align());
 		HeapAlloc(GetProcessHeap().unwrap(),HEAP_ZERO_MEMORY,layout.size()).cast()
 	}
 
-	unsafe fn realloc(&self, ptr: *mut u8, layout: std::alloc::Layout, new_size: usize) -> *mut u8
+	unsafe fn realloc(&self, ptr: *mut u8, layout: Layout, new_size: usize) -> *mut u8
 	{
 		naprintln!("[realloc] ptr: {ptr:p} size: {} bytes, alignment: {} bytes",layout.size(),layout.align());
 		HeapReAlloc(GetProcessHeap().unwrap(),HEAP_FLAGS(0),Some(ptr.cast()),new_size).cast()

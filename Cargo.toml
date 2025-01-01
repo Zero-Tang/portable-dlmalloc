@@ -1,6 +1,6 @@
 [package]
 name = "portable-dlmalloc"
-version = "1.0.0"
+version = "1.1.0"
 edition = "2021"
 license = "MIT"
 description = "Portable Fork of Doug Lea's malloc Implementation."
@@ -15,4 +15,4 @@ exclude = ["*.bat","*port_*.c","export.def","sample.c","readme.md","rust-sample/
 members = ["rust-sample"]
 
 [build-dependencies]
-cc = "1.2.4"
+cc = "1.2.6"

@@ -24,16 +24,16 @@ To port `dlmalloc` to your platform, implement the following procedures:
 	```C
 	void* custom_direct_mmap(size_t length);
 	```
-- `init_lock`/`final_lock`/`acquire_lock`/`release_lock`: Implement thread-safety for `dlmalloc`. The minimal implementation can be a simple spinlock. You can leave the implementations empty for this set of routines if you do not need thread-safety.
+- `init_lock`/`final_lock`/`acquire_lock`/`release_lock`: Implement thread-safety for `dlmalloc`. The minimal implementation can be a simple spinlock. If you do not need thread-safety, define `USE_LOCKS=0` so you don't have to implement these routines.
 	```C
 	void init_lock(void* *lock);	// Initialize the mutex.
 	void final_lock(void* *lock);	// Finalize the mutex.
 	void acquire_lock(void* *lock);	// Acquire the mutex.
 	void release_lock(void* *lock);	// Release the mutex.
 	```
-- `custom_abort`: Implement `abort()` routine. `dlmalloc` calls `custom_abort()` when internal assertion fails. You may use panic here.
+- `custom_abort`: Implement `abort()` routine. `dlmalloc` calls `custom_abort()` when internal assertion fails. You may use panic here and print detailed information.
 	```C
-	void custom_abort(void);
+	void custom_abort(char* message,const char* src_file_name,const int src_line_number);
 	```
 - `dprintf2`: Implement debug-printer, which can trace file-name and line-numbers, for `dlmalloc`. Note that the format specifiers are implementation-specific. For example, you might have to use `%a` to print ASCII-strings in EDK2. You do not have to implement `dprintf2` if you won't debug `malloc.c`.
 	```C
@@ -52,6 +52,16 @@ When you compile `malloc.c`, define the following preprocessor flags:
 - `DEFAULT_GRANULARITY`: This constant determines the size granularity when `dlmalloc` calls `custom_mmap`. The default is 64KiB.
 
 Note: the following samples with Custom Port do not keep track of allocated pages. There will be unreleased pages after your program quits even if you freed all allocated buffers. If you port `dlmalloc` to programs that are volatile to its address-space (e.g.: Kernel-Mode drivers, pluggable dynamic libraries), you have to keep track of allocated pages and release them before you quit.
+
+## Independent-Allocation API
+The `dlmalloc` library also provides `Independent-Allocation` API, which allocates multiple elements all at once, and there memory addresses are guaranteed to be as close as possible. However, there is no `dlmemalign`-equivalent routines in this API. So alignments are not guaranteed to your needs. \
+To utilize `Independent-Allocation` API, use `dlindependent_calloc` (all elements have the same size) or `dlindependent_comalloc` (each element has different size) to allocate memories, and use `dlbulk_free` to free them all at once.
+
+## Mspace API
+The `dlmalloc` library also provides `mspace` API, which uses a separate memory space to allocate memories. This set of API may be useful to isolate memory allocations. \
+To utilize the `mspace` API, use `create_mspace` or `create_mspace_with_base` to create a memory space; use `mspace_malloc` (default alignment) or `mspace_memalign` (special alignment) to allocate memory; use `mspace_free` to free memory; and eventually use `destroy_mspace` to destroy the memory space.
+
+Mspace API also provides `Independent-Allocation` API.
 
 ## Samples
 This chapter describes how to build samples with `dlmalloc` library. Note that this chapter emphasizes on the given samples. If you wish to port `dlmalloc` to your platform, it's recommended to check out [Port to Your Platform](#port-to-your-platform) section, which provides the generalized guide for building the portable `dlmalloc`. You should be able to use this generalized guide if you are familiar with your compiler suite / build system.
