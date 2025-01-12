@@ -3,9 +3,14 @@ name = "rust-sample"
 version = "0.1.0"
 edition = "2021"
 
+[dependencies]
+
 [dependencies.portable-dlmalloc]
 path = ".."
 
-[dependencies.windows]
+[target.'cfg(windows)'.dependencies.windows]
 version="0.58.0"
 features=["Win32_System_Memory","Win32_System_Threading","Win32_System_Console"]
+
+[target.'cfg(unix)'.dependencies.libc]
+version = "0.2.169"

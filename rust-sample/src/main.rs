@@ -4,6 +4,8 @@ use portable_dlmalloc::DLMalloc;
 
 #[cfg(target_os="windows")] mod win;
 #[cfg(target_os="windows")] use win::*;
+#[cfg(target_os="linux")] mod linux;
+#[cfg(target_os="linux")] use linux::*;
 
 // Implement a formatter without alloc operation!
 struct FormatBuffer
