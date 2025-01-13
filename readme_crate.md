@@ -9,6 +9,18 @@ You will have to implement the eight C functions as described in [Port To Your P
 
 `dlmalloc` guarantees the alignment of allocation in comparison to just some wrappers on `malloc` functions (e.g.: wrapping `HeapAlloc` in Windows). If your structure is defined to be aligned on a big alignment (e.g.: 1024 bytes), this allocator guarantees the returned pointer if aligned on your specific boundary. The minimum alignment of `dlmalloc` is four times of the pointer size. (e.g.: 32 bytes on 64-bit platform.)
 
+### Specify Default Granularity
+To specify a default granularity, you should define an environment variable `DEFAULT_MMAP_GRANULARITY` before you compile. \
+For instance, to define the granularity to 64K in Windows:
+```bat
+set DEFAULT_MMAP_GRANULARITY=0x10000
+```
+Or in Linux:
+```sh
+export DEFAULT_MMAP_GRANULARITY=0x10000
+```
+You must specify a granularity to be a integer power of two. Note: only `0x` prefix is recognized by the build script. This means you can only use either hexadecimal or decimal integers.
+
 ### Global Allocator
 To use this crate as your global allocator:
 ```Rust

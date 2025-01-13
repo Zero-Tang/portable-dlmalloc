@@ -579,7 +579,10 @@ MAX_RELEASE_CHECK_RATE   default: 4095 unless not HAVE_MMAP
 #ifndef MALLOC_FAILURE_ACTION
 #define MALLOC_FAILURE_ACTION
 
+#ifndef _MSC_VER
+/* Non-MSVC compiler might not internally define size_t. */
 #include <stddef.h>
+#endif /* _MSC_VER */
 #endif /* MALLOC_FAILURE_ACTION */
 
 void custom_abort(char* message,const char* fn,const unsigned int ln);
