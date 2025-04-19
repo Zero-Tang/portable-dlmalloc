@@ -51,7 +51,7 @@ To use alternate alloactor, you will have to declare that your crate uses `alloc
 You also need to enable `alt-alloc` in `Cargo.toml` section:
 ```toml
 [dependencies.portable-dlmalloc]
-version = "0.3.1"
+version = "0.3.2"
 features = ["alt-alloc"]
 ```
 To use alternate allocator, you need to create an allocator using a reference to `AltAlloc`:
@@ -65,6 +65,13 @@ println!("{:p} | {}",&raw const *ap,ap);
 Please note that alternate allocator is a nightly-only API. If Rust removes this feature in future, this feature will be removed from this crate as well.
 
 **Caveat**: You must use the allocator in references, as the `AltAlloc` **does not implement** `Copy` trait!
+
+#### Mspace Allocator as Alternate Allocator
+The `MspaceAlloc` allocator can also be used for custom allocator.
+
+Since the `new` method is `const fn`, you can declare a custom allocator as a static variable without using something like `lazy_static`. However, the `Drop` trait of `MspaceAlloc` won't be called if such allocator is declared as static variable!
+
+**Caveat**: You must use the allocator in references, as the `MspaceAlloc` **does not implement** `Copy` trait!
 
 ### Raw FFI
 The `raw` module from this crate exports FFI bindings for `dlmalloc` library.

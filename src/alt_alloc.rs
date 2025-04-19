@@ -1,5 +1,5 @@
-use core::{alloc::*, ffi::*, ptr::NonNull, slice};
-use crate::raw::*;
+use core::{alloc::*, ffi::*, ptr::NonNull, slice, sync::atomic::Ordering};
+use crate::{raw::*, MspaceAlloc};
 
 /// ## Alternate Allocator API
 /// The alternate allocator API is provided by the `mspace` functionality in dlmalloc library. \
@@ -79,5 +79,51 @@ unsafe impl Allocator for AltAlloc
 	unsafe fn deallocate(&self, ptr: NonNull<u8>, _layout: Layout)
 	{
 		mspace_free(self.mspace,ptr.as_ptr().cast())
+	}
+}
+
+unsafe impl Allocator for MspaceAlloc
+{
+	fn allocate(&self,layout:Layout)->Result<NonNull<[u8]>,AllocError>
+	{
+		unsafe
+		{
+			// Lazily initialize mspace.
+			if self.init.compare_exchange(false,true,Ordering::Acquire,Ordering::Relaxed).is_ok()
+			{
+				let msp=create_mspace(self.capacity,1);
+				if msp.is_null()
+				{
+					return Err(AllocError);
+				}
+				self.mspace.store(msp,Ordering::Release);
+			}
+			let p:*mut u8=mspace_memalign(self.mspace.load(Ordering::Acquire),layout.align(),layout.size()).cast();
+			if p.is_null()
+			{
+				Err(AllocError)
+			}
+			else
+			{
+				let r:&mut [u8]=slice::from_raw_parts_mut(p,layout.size());
+				Ok(NonNull::from_mut(r))
+			}
+		}
+	}
+
+	unsafe fn deallocate(&self,ptr:NonNull<u8>,_layout:Layout)
+	{
+		mspace_free(self.mspace.load(Ordering::Acquire),ptr.as_ptr().cast())
+	}
+}
+
+impl Drop for MspaceAlloc
+{
+	fn drop(&mut self)
+	{
+		unsafe
+		{
+			self.destroy();
+		}
 	}
 }

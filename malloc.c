@@ -563,6 +563,7 @@ MAX_RELEASE_CHECK_RATE   default: 4095 unless not HAVE_MMAP
 
 #ifdef PORTABLE
 #define HAVE_MMAP 1
+#define HAVE_MREMAP 0
 #define HAVE_MORECORE 0
 #define LACKS_UNISTD_H
 #define LACKS_ERRNO_H
@@ -577,6 +578,8 @@ MAX_RELEASE_CHECK_RATE   default: 4095 unless not HAVE_MMAP
 #define LACKS_FCNTL_H
 #ifndef MALLOC_FAILURE_ACTION
 #define MALLOC_FAILURE_ACTION
+
+#include <stddef.h>
 #endif /* MALLOC_FAILURE_ACTION */
 
 void custom_abort(void);
@@ -3151,12 +3154,14 @@ static void post_fork_child(void)  { INITIAL_LOCK(&(gm)->mutex); }
 
 /* Initialize mparams */
 static int init_mparams(void) {
+  int r;
 #ifdef NEED_GLOBAL_LOCK_INIT
   if (malloc_global_mutex_status <= 0)
 	init_malloc_global_mutex();
 #endif
 
-  ACQUIRE_MALLOC_GLOBAL_LOCK();
+  r = ACQUIRE_MALLOC_GLOBAL_LOCK();
+  r = r;
   if (mparams.magic == 0) {
 	size_t magic;
 	size_t psize;
@@ -4375,9 +4380,11 @@ static int sys_trim(mstate m, size_t pad) {
 		  }
 		}
 		else if (HAVE_MORECORE) {
+		  int r;
 		  if (extra >= HALF_MAX_SIZE_T) /* Avoid wrapping negative */
 			extra = (HALF_MAX_SIZE_T) + SIZE_T_ONE - unit;
-		  ACQUIRE_MALLOC_GLOBAL_LOCK();
+		  r = ACQUIRE_MALLOC_GLOBAL_LOCK();
+		  r = r;
 		  {
 			/* Make sure end of memory is where we last set it. */
 			char* old_br = (char*)(CALL_MORECORE(0));

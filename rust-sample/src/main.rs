@@ -2,10 +2,13 @@
 #![feature(allocator_api)]
 
 use core::{fmt,ptr::null_mut,ffi::c_void};
-use portable_dlmalloc::{alt_alloc::AltAlloc, DLMalloc};
+use std::alloc::AllocError;
+use portable_dlmalloc::{alt_alloc::AltAlloc, DLMalloc, MspaceAlloc};
 
 #[cfg(target_os="windows")] mod win;
 #[cfg(target_os="windows")] use win::*;
+#[cfg(target_os="linux")] mod linux;
+#[cfg(target_os="linux")] use linux::*;
 
 // Implement a formatter without alloc operation!
 struct FormatBuffer
@@ -64,6 +67,7 @@ impl fmt::Write for FormatBuffer
 
 #[global_allocator] static GLOBAL_ALLOCATOR:DLMalloc=DLMalloc;
 // static SYSTEM_ALLOCATOR:SysAlloc=SysAlloc;
+static MSPACE_ALT_ALLOCATOR:MspaceAlloc=MspaceAlloc::new(0x500000);
 
 #[derive(Debug)]
 #[repr(C,align(0x400))] struct AlignedHigher
@@ -109,4 +113,9 @@ fn main()
 	naprintln!("av1: {:p} | {:?}",av.as_ptr(),av);
 	let av2:Vec::<u8,&AltAlloc>=Vec::with_capacity_in(0x300000,&a);
 	naprintln!("av2: {:p} | {:?}",av2.as_ptr(),av2);
+	// Try allocator API on MspaceAlloc.
+	naprintln!("Testing allocator API on Mspace API...");
+	let ab:Box::<u32,&MspaceAlloc>=Box::new_in(15,&MSPACE_ALT_ALLOCATOR);
+	let ac:Result<Box::<u32,&MspaceAlloc>,AllocError>=Box::try_new_in(26,&MSPACE_ALT_ALLOCATOR);
+	naprintln!("ab: {:p}, ac: {:p}",&raw const ab,&raw const ac);
 }

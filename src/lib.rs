@@ -80,10 +80,10 @@ impl MspaceAlloc
 	}
 
 	/// ## `destroy` method
-	/// Destroys `MspaceAlloc` object.
+	/// Destroys `MspaceAlloc` object. All `mmap`ed pages will be released.
 	/// 
 	/// ## Safety
-	/// You must ensure all allocated objects are dropped before destroying the allocator!
+	/// You must ensure all allocated objects (Vec, Box, etc.) are dropped before destroying the allocator!
 	pub unsafe fn destroy(&self)
 	{
 		if self.init.compare_exchange(true,false,Ordering::Acquire,Ordering::Relaxed).is_ok()
