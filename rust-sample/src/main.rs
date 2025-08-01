@@ -1,8 +1,7 @@
 // Rust example for using portable dlmalloc
 #![feature(allocator_api)]
 
-use core::{fmt,ptr::null_mut,ffi::c_void};
-use std::alloc::AllocError;
+use core::{fmt,ptr::null_mut,ffi::c_void,alloc::AllocError};
 use portable_dlmalloc::{alt_alloc::AltAlloc, DLMalloc, MspaceAlloc};
 
 #[cfg(target_os="windows")] mod win;
@@ -66,10 +65,10 @@ impl fmt::Write for FormatBuffer
 }
 
 #[global_allocator] static GLOBAL_ALLOCATOR:DLMalloc=DLMalloc;
-// static SYSTEM_ALLOCATOR:SysAlloc=SysAlloc;
+// #[global_allocator] static SYSTEM_ALLOCATOR:SysAlloc=SysAlloc;
 static MSPACE_ALT_ALLOCATOR:MspaceAlloc=MspaceAlloc::new(0x500000);
 
-#[derive(Debug)]
+#[derive(Debug,Default)]
 #[repr(C,align(0x400))] struct AlignedHigher
 {
 	a:u8,
@@ -87,8 +86,22 @@ static MSPACE_ALT_ALLOCATOR:MspaceAlloc=MspaceAlloc::new(0x500000);
 	null_mut::<u8>().sub(1).cast()
 }
 
+fn test_realloc()
+{
+	naprintln!("Testing realloc-alignment...");
+	// Try realloc alignemnt.
+	let mut v1:Vec::<AlignedHigher>=Vec::with_capacity(2);
+	v1.push(AlignedHigher::default());
+	v1.push(AlignedHigher::default());
+	let v2=vec![123;2345];
+	naprintln!("v1: {:p}, v2: {:p}",v1.as_ptr(),v2.as_ptr());
+	v1.push(AlignedHigher::default());
+	naprintln!("v1: {:p}",v1.as_ptr());
+}
+
 fn main()
 {
+	test_realloc();
 	let p:Box<u32>=Box::new(55);
 	let q:Box<AlignedHigher>=Box::new(AlignedHigher{a:4,b:555,c:6666666});
 	let mut v:Vec<u32>=vec![5,4,1,6,3,8,9];

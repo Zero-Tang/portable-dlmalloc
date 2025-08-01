@@ -1,7 +1,7 @@
 [package]
 name = "portable-dlmalloc"
-version = "0.3.2"
-edition = "2021"
+version = "0.3.3"
+edition = "2024"
 license = "MIT"
 description = "Portable Fork of Doug Lea's malloc Implementation."
 homepage = "https://github.com/Zero-Tang/portable-dlmalloc"
@@ -18,4 +18,4 @@ members = ["rust-sample"]
 alt-alloc = []
 
 [build-dependencies]
-cc = "1.2.19"
+cc = "1.2.30"

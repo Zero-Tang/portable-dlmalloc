@@ -1,5 +1,5 @@
 #![no_std]
-#![feature(allocator_api,non_null_from_ref)]
+#![feature(allocator_api)]
 
 use core::{alloc::*, ffi::c_void, ptr::null_mut, sync::atomic::*};
 
@@ -8,7 +8,13 @@ use core::{alloc::*, ffi::c_void, ptr::null_mut, sync::atomic::*};
 pub mod raw;
 use raw::*;
 
+/// This module contains the alternate allocator API.
 #[cfg(feature="alt-alloc")] pub mod alt_alloc;
+
+unsafe extern "C"
+{
+	fn memcpy(dest:*mut c_void,src:*const c_void,cb:usize)->*mut c_void;
+}
 
 /// ## DLMalloc allocator
 /// This is the default allocator.
@@ -18,17 +24,35 @@ unsafe impl GlobalAlloc for DLMalloc
 {
 	unsafe fn alloc(&self, layout: Layout) -> *mut u8
 	{
-		dlmemalign(layout.align(),layout.size()).cast()
+		unsafe{dlmemalign(layout.align(),layout.size()).cast()}
 	}
 
 	unsafe fn dealloc(&self, ptr: *mut u8, _layout: Layout)
 	{
-		dlfree(ptr.cast());
+		unsafe{dlfree(ptr.cast())};
 	}
 
-	unsafe fn realloc(&self, ptr: *mut u8, _layout: Layout, new_size: usize) -> *mut u8
+	unsafe fn realloc(&self, ptr: *mut u8, layout: Layout, new_size: usize) -> *mut u8
 	{
-		dlrealloc(ptr.cast(),new_size).cast()
+		// The `dlrealloc` function does not guarantee the original alignment!
+		let p=unsafe{dlrealloc_in_place(ptr.cast(),new_size)};
+		if p==ptr.cast()
+		{
+			// In-place allocation is successful. Just return the pointer.
+			ptr
+		}
+		else
+		{
+			// In-place allocation failed. Allocate a new pointer.
+			assert!(p.is_null(),"dlrealloc_in_place returned non-null pointer on return!");
+			let p=unsafe{dlmemalign(layout.align(),new_size)};
+			unsafe
+			{
+				memcpy(p,ptr.cast(),layout.size());
+				dlfree(ptr.cast());
+			}
+			p.cast()
+		}
 	}
 }
 
@@ -48,19 +72,36 @@ unsafe impl GlobalAlloc for MspaceAlloc
 		// Lazily initialize mspace.
 		if self.init.compare_exchange(false,true,Ordering::Acquire,Ordering::Relaxed).is_ok()
 		{
-			self.mspace.store(create_mspace(self.capacity,1),Ordering::Release);
+			self.mspace.store(unsafe{create_mspace(self.capacity,1)},Ordering::Release);
 		}
-		mspace_memalign(self.mspace.load(Ordering::Acquire),layout.align(),layout.size()).cast()
+		unsafe{mspace_memalign(self.mspace.load(Ordering::Acquire),layout.align(),layout.size()).cast()}
 	}
 
 	unsafe fn dealloc(&self, ptr: *mut u8, _layout: Layout)
 	{
-		mspace_free(self.mspace.load(Ordering::Acquire),ptr.cast())
+		unsafe{mspace_free(self.mspace.load(Ordering::Acquire),ptr.cast())}
 	}
 
-	unsafe fn realloc(&self, ptr: *mut u8, _layout: Layout, new_size: usize) -> *mut u8
+	unsafe fn realloc(&self, ptr: *mut u8, layout: Layout, new_size: usize) -> *mut u8
 	{
-		mspace_realloc(self.mspace.load(Ordering::Acquire),ptr.cast(),new_size).cast()
+		let p=unsafe{mspace_realloc_in_place(self.mspace.load(Ordering::Acquire),ptr.cast(),new_size)};
+		if p==ptr.cast()
+		{
+			// In-place allocation is successful. Just return the pointer.
+			ptr
+		}
+		else
+		{
+			// In-place allocation failed. Allocate a new pointer.
+			assert!(p.is_null(),"mspace_realloc_in_place returned non-null pointer on return!");
+			let p=unsafe{mspace_memalign(self.mspace.load(Ordering::Acquire),layout.align(),new_size)};
+			unsafe
+			{
+				memcpy(p,ptr.cast(),layout.size());
+				mspace_free(self.mspace.load(Ordering::Acquire),ptr.cast());
+			}
+			p.cast()
+		}
 	}
 }
 
@@ -88,7 +129,7 @@ impl MspaceAlloc
 	{
 		if self.init.compare_exchange(true,false,Ordering::Acquire,Ordering::Relaxed).is_ok()
 		{
-			destroy_mspace(self.mspace.load(Ordering::Acquire));
+			unsafe{destroy_mspace(self.mspace.load(Ordering::Acquire))};
 		}
 	}
 }

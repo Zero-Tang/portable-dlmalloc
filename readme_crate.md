@@ -51,7 +51,7 @@ To use alternate alloactor, you will have to declare that your crate uses `alloc
 You also need to enable `alt-alloc` in `Cargo.toml` section:
 ```toml
 [dependencies.portable-dlmalloc]
-version = "0.3.2"
+version = "0.3.3"
 features = ["alt-alloc"]
 ```
 To use alternate allocator, you need to create an allocator using a reference to `AltAlloc`:
@@ -120,8 +120,10 @@ To port `dlmalloc` to your platform, implement the following procedures:
 	```
 - `custom_abort`: Implement `abort()` routine. `dlmalloc` calls `custom_abort()` when internal assertion fails. You may use panic here.
 	```Rust
-	#[no_mangle] unsafe extern "C" custom_abort()->!;
+	#[no_mangle] unsafe extern "C" custom_abort(message:*const u8,src_file:*const u8,src_line:u32)->!;
 	```
+	Note that message and src_file are null-terminated strings. The encodings of the string is implementation-specific of the C compiler. It is your duty to convert them into UTF-8 encoding. \
+	The message string is guaranteed to contain ASCII characters only. However, src_file may contain non-ASCII characters.
 - `memcpy`/`memset`: I suppose no explanations are needed for these two. `dlmalloc` uses these two routines, but they can be easily implemented anyway. You do not need to implement these two routines in Rust if your linker can find libraries that implement these two routines. Note that MSVC SDK provides source code of high-performance `memcpy` and `memset` implementations in Assembly!
 
 Note: If you are using Rust 2024 or higher, you must use `#[unsafe(no_mangle)]` as prefix! See [Rust unsafe attributes](https://doc.rust-lang.org/edition-guide/rust-2024/unsafe-attributes.html) for more details. \

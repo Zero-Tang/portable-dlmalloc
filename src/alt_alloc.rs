@@ -41,7 +41,7 @@ impl AltAlloc
 	{
 		Self
 		{
-			mspace:create_mspace_with_base(base,capacity,locked as i32)
+			mspace:unsafe{create_mspace_with_base(base,capacity,locked as i32)}
 		}
 	}
 }
@@ -78,7 +78,7 @@ unsafe impl Allocator for AltAlloc
 
 	unsafe fn deallocate(&self, ptr: NonNull<u8>, _layout: Layout)
 	{
-		mspace_free(self.mspace,ptr.as_ptr().cast())
+		unsafe{mspace_free(self.mspace,ptr.as_ptr().cast())}
 	}
 }
 
@@ -113,7 +113,7 @@ unsafe impl Allocator for MspaceAlloc
 
 	unsafe fn deallocate(&self,ptr:NonNull<u8>,_layout:Layout)
 	{
-		mspace_free(self.mspace.load(Ordering::Acquire),ptr.as_ptr().cast())
+		unsafe{mspace_free(self.mspace.load(Ordering::Acquire),ptr.as_ptr().cast())}
 	}
 }
 

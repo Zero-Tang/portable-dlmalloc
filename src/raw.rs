@@ -33,7 +33,7 @@ pub const M_MMAP_THRESHOLD:i32=-3;
 	pub keepcost:usize
 }
 
-extern "C"
+unsafe extern "C"
 {
 	/// `malloc(size_t n)`
 	///
@@ -79,6 +79,9 @@ extern "C"
 	/// if n is for fewer bytes than already held by p, the newly unused
 	/// space is lopped off and freed if possible.  realloc with a size
 	/// argument of zero (re)allocates a minimum-sized chunk.
+	/// 
+	/// Note that the return new pointer does not guarantee the same
+	/// alignment to the old pointer!
 	///
 	/// The old unix realloc convention of allowing the last-free'd chunk
 	/// to be used as an argument to realloc is not supported.
@@ -438,6 +441,9 @@ extern "C"
 	pub fn mspace_realloc(msp:*mut c_void,mem:*mut c_void,newsize:usize)->*mut c_void;
 	/// `mspace_calloc` behaves as calloc, but operates within the given space.
 	pub fn mspace_calloc(msp:*mut c_void,n_elements:usize,elem_size:usize)->*mut c_void;
+	/// `mspace_realloc_in_place` behaves as realloc_in_place,
+	/// but operates within the given space.
+	pub fn mspace_realloc_in_place(msp:*mut c_void,mem:*mut c_void,newsize:usize)->*mut c_void;
 	/// `mspace_memalign` behaves as memalign, but operates within the given space.
 	pub fn mspace_memalign(msp:*mut c_void,alignment:usize,bytes:usize)->*mut c_void;
 	/// `mspace_independent_calloc` behaves as independent_calloc, but operates within the given space.

@@ -1,37 +1,56 @@
 // Rust example for using portable dlmalloc
 use core::{fmt,ffi::c_void};
-use std::{alloc::GlobalAlloc, ptr::null_mut};
+use std::{alloc::{GlobalAlloc,Layout}, ptr::null_mut};
 
 use windows::Win32::System::{Memory::*,Threading::*,Console::*};
 
 use crate::{naprint, naprintln, FormatBuffer};
 
+#[allow(dead_code)]
 pub struct SysAlloc;
+
+#[allow(dead_code)]
+const HEAP_ALIGNMENT:usize=size_of::<usize>()*2;
 
 unsafe impl GlobalAlloc for SysAlloc
 {
-	unsafe fn alloc(&self, layout: std::alloc::Layout) -> *mut u8
+	unsafe fn alloc(&self, layout: Layout) -> *mut u8
 	{
 		naprintln!("[alloc] size: {} bytes, alignment: {} bytes",layout.size(),layout.align());
-		HeapAlloc(GetProcessHeap().unwrap(),HEAP_FLAGS(0),layout.size()).cast()
+		if layout.align()>HEAP_ALIGNMENT
+		{
+			let size:usize=layout.size()+layout.align();
+			let mask=!(layout.align()-1);
+			let p=HeapAlloc(GetProcessHeap().unwrap(),HEAP_FLAGS(0),size);
+			let q:*mut *mut c_void=(((p as usize)&mask)+layout.align()) as *mut *mut c_void;
+			q.sub(1).write(p);
+			q.cast()
+		}
+		else
+		{
+			HeapAlloc(GetProcessHeap().unwrap(),HEAP_FLAGS(0),layout.size()).cast()
+		}
 	}
 
-	unsafe fn dealloc(&self, ptr: *mut u8, _layout: std::alloc::Layout)
+	unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout)
 	{
-		naprintln!("[free] ptr: 0x{ptr:p}");
-		let _=HeapFree(GetProcessHeap().unwrap(),HEAP_FLAGS(0),Some(ptr.cast()));
+		naprintln!("[free] ptr: 0x{ptr:p}, size: {} bytes, alignment: {} bytes",layout.size(),layout.align());
+		let p=if layout.align()>HEAP_ALIGNMENT
+		{
+			let q:*mut *mut c_void=ptr.cast();
+			q.sub(1).read()
+		}
+		else
+		{
+			ptr.cast()
+		};
+		let _=HeapFree(GetProcessHeap().unwrap(),HEAP_FLAGS(0),Some(p));
 	}
 
-	unsafe fn alloc_zeroed(&self, layout: std::alloc::Layout) -> *mut u8
+	unsafe fn alloc_zeroed(&self, layout: Layout) -> *mut u8
 	{
 		naprintln!("[alloc-zeroed] size: {} bytes, alignment: {} bytes",layout.size(),layout.align());
 		HeapAlloc(GetProcessHeap().unwrap(),HEAP_ZERO_MEMORY,layout.size()).cast()
-	}
-
-	unsafe fn realloc(&self, ptr: *mut u8, layout: std::alloc::Layout, new_size: usize) -> *mut u8
-	{
-		naprintln!("[realloc] ptr: {ptr:p} size: {} bytes, alignment: {} bytes",layout.size(),layout.align());
-		HeapReAlloc(GetProcessHeap().unwrap(),HEAP_FLAGS(0),Some(ptr.cast()),new_size).cast()
 	}
 }
 
