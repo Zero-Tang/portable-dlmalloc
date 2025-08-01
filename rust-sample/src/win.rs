@@ -6,6 +6,7 @@ use windows::Win32::System::{Memory::*,Threading::*,Console::*};
 
 use crate::{naprint, naprintln, FormatBuffer};
 
+#[allow(dead_code)]
 pub struct SysAlloc;
 
 unsafe impl GlobalAlloc for SysAlloc
@@ -30,7 +31,7 @@ unsafe impl GlobalAlloc for SysAlloc
 
 	unsafe fn realloc(&self, ptr: *mut u8, layout: Layout, new_size: usize) -> *mut u8
 	{
-		naprintln!("[realloc] ptr: {ptr:p} size: {} bytes, alignment: {} bytes",layout.size(),layout.align());
+		naprintln!("[realloc] ptr: {ptr:p} size: {} bytes, alignment: {} bytes, new size: {new_size} bytes",layout.size(),layout.align());
 		HeapReAlloc(GetProcessHeap().unwrap(),HEAP_FLAGS(0),Some(ptr.cast()),new_size).cast()
 	}
 }

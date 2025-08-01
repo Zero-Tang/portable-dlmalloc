@@ -1,6 +1,6 @@
 // Rust example for using portable dlmalloc
 use core::{fmt,ptr::null_mut,ffi::c_void};
-use portable_dlmalloc::DLMalloc;
+use portable_dlmalloc::*;
 
 #[cfg(target_os="windows")] mod win;
 #[cfg(target_os="windows")] use win::*;
@@ -63,6 +63,7 @@ impl fmt::Write for FormatBuffer
 }
 
 #[global_allocator] static GLOBAL_ALLOCATOR:DLMalloc=DLMalloc;
+// #[global_allocator] static MSPACE_ALLOCATOR:MspaceAlloc=MspaceAlloc::new(0x200000);
 // #[global_allocator] static SYSTEM_ALLOCATOR:SysAlloc=SysAlloc;
 
 #[derive(Debug)]
@@ -117,4 +118,11 @@ fn main()
 	// Verify the alignment.
 	assert_eq!(pp as usize & (align_of::<u32>()-1),0);
 	assert_eq!(pq as usize & (align_of::<AlignedHigher>()-1),0);
+	// Verify the realloc alignment.
+	let mut v1:Vec<AlignedHigher>=Vec::with_capacity(1);
+	v1.push(AlignedHigher{a:1,b:2,c:3});
+	let v2=vec![555;2345];
+	naprintln!("v1: {:p}, v2: {:p}",v1.as_ptr(),v2.as_ptr());
+	v1.push(AlignedHigher{a:3,b:2,c:1});
+	naprintln!("v1: {v1:?} is located at {:p}",v1.as_ptr());
 }

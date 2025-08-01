@@ -1,14 +1,10 @@
 fn main()
 {
-	let mmap_granularity=match option_env!("DEFAULT_MMAP_GRANULARITY")
-	{
-		Some(s)=>s,
-		None=>"0x200000"
-	};
+	let mmap_granularity=option_env!("DEFAULT_MMAP_GRANULARITY").unwrap_or("0x200000");
 	// Check the integer prefix.
-	let (radix,mg)=if mmap_granularity.starts_with("0x")
+	let (radix,mg)=if let Some(mg)=mmap_granularity.strip_prefix("0x")
 	{
-		(16,&mmap_granularity[2..])
+		(16,mg)
 	}
 	else
 	{
