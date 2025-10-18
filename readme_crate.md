@@ -90,10 +90,6 @@ To port `dlmalloc` to your platform, implement the following procedures:
 	```
 	Hint: If you are in baremetal environment without `mmap`-like services like outdated embedded systems, you can just return the pointer to the free memory. \
 	Note: This crate does not support `sbrk`, even though original implementation of `dlmalloc` supports it. Just emulate the behavior of `mmap` with `sbrk`.
-- `custom_direct_mmap`: Extend the allocated pages. This is optional. Return `(void*)-1` to indicate failure/no-support.
-	```Rust
-	#[no_mangle] unsafe extern "C" custom_direct_mmap(length:usize)->*mut c_void;
-	```
 - `init_lock`/`final_lock`/`acquire_lock`/`release_lock`: Implement thread-safety for `dlmalloc`. The minimal implementation can be a simple spinlock. You can leave the implementations empty for this set of routines if you do not need thread-safety. \
 	The exact type of `lock` depends on your implementation. It can be `*mut T` where T can be anything that has the size of a pointer.
 	```Rust

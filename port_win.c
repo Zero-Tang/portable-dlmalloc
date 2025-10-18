@@ -31,12 +31,6 @@ int custom_munmap(void* ptr,size_t length)
 	return b?0:-1;
 }
 
-void* custom_direct_mmap(size_t length)
-{
-	// Return -1 because we don't have to support direct-mmap.
-	return (void*)-1;
-}
-
 void custom_abort(char* message,const char* src_fn,const unsigned int src_ln)
 {
 	puts("The dlmalloc library called abort!");

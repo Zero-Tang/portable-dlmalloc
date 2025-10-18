@@ -1,54 +1,8 @@
 // Rust example for using portable dlmalloc
-use core::{fmt,ptr::null_mut,ffi::c_void};
 use portable_dlmalloc::*;
 
 #[cfg(target_os="windows")] mod win;
-#[cfg(target_os="windows")] use win::*;
 #[cfg(target_os="linux")] mod linux;
-#[cfg(target_os="linux")] use linux::*;
-
-// Implement a formatter without alloc operation!
-struct FormatBuffer
-{
-	buffer:[u8;512],
-	used:usize
-}
-
-impl Default for FormatBuffer
-{
-	fn default() -> Self
-	{
-		Self
-		{
-			buffer:[0;512],
-			used:0
-		}
-	}
-}
-
-impl fmt::Write for FormatBuffer
-{
-	fn write_str(&mut self, s: &str) -> fmt::Result
-	{
-		let remainder=&mut self.buffer[self.used..];
-		let current=s.as_bytes();
-		if remainder.len()<current.len()
-		{
-			return Err(fmt::Error);
-		}
-		remainder[..current.len()].copy_from_slice(current);
-		self.used+=current.len();
-		Ok(())
-	}
-}
-
-#[macro_export] macro_rules! naprint
-{
-	($($args:tt)*) =>
-	{
-		system_print(format_args!($($args)*))
-	};
-}
 
 #[macro_export] macro_rules! naprintln
 {
@@ -98,11 +52,6 @@ unsafe fn nulstr_from_ptr<'a>(string:*const u8)->&'a str
 	let msg=unsafe{nulstr_from_ptr(message)};
 	let sfn=unsafe{nulstr_from_ptr(src_file)};
 	panic!("The dlmalloc library executed abort! Reason: {msg}\n{sfn}@{src_line}");
-}
-
-#[no_mangle] unsafe extern "C" fn custom_direct_mmap(_length:usize)->*mut c_void
-{
-	null_mut::<u8>().sub(1).cast()
 }
 
 fn main()

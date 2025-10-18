@@ -1,10 +1,19 @@
 // Rust example for using portable dlmalloc
 use core::{fmt,ffi::c_void,ptr::null_mut};
-use std::alloc::*;
+use std::{alloc::*, cell::LazyCell};
 
-use windows::Win32::System::{Memory::*,Threading::*,Console::*};
+use static_collections::ffi::wstring::StaticWString;
+use windows::Win32::{Foundation::HANDLE, System::{Console::*, Memory::*, Threading::*}};
 
-use crate::{naprint, naprintln, FormatBuffer};
+use crate::naprintln;
+
+#[macro_export] macro_rules! naprint
+{
+	($($args:tt)*) =>
+	{
+		$crate::win::system_print(format_args!($($args)*))
+	};
+}
 
 #[allow(dead_code)]
 pub struct SysAlloc;
@@ -36,19 +45,14 @@ unsafe impl GlobalAlloc for SysAlloc
 	}
 }
 
+static mut STDOUT_HANDLE:LazyCell<HANDLE>=LazyCell::new(|| unsafe{GetStdHandle(STD_OUTPUT_HANDLE).unwrap()});
+
 pub fn system_print(args:fmt::Arguments)
 {
-	let mut w=FormatBuffer::default();
-	let r=fmt::write(&mut w,args);
-	if r.is_ok()
+	let mut w:StaticWString<1024>=StaticWString::new();
+	if fmt::write(&mut w,args).is_ok()
 	{
-		let b=&w.buffer;
-		let r=unsafe{GetStdHandle(STD_OUTPUT_HANDLE)};
-		if let Ok(h)=r
-		{
-			let mut size:u32=w.used as u32;
-			let _=unsafe{WriteConsoleA(h, b, Some(&mut size as *mut u32), None)};
-		}
+		let _=unsafe{WriteConsoleW(*STDOUT_HANDLE,w.as_slice(),None,None)};
 	}
 }
 
