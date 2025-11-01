@@ -2,9 +2,10 @@
 use core::{fmt,ffi::c_void};
 use std::{alloc::{GlobalAlloc,Layout}, ptr::null_mut};
 
+use static_collections::ffi::wstring::StaticWString;
 use windows::Win32::System::{Memory::*,Threading::*,Console::*};
 
-use crate::{naprint, naprintln, FormatBuffer};
+use crate::naprintln;
 
 #[allow(dead_code)]
 pub struct SysAlloc;
@@ -56,18 +57,25 @@ unsafe impl GlobalAlloc for SysAlloc
 
 pub fn system_print(args:fmt::Arguments)
 {
-	let mut w=FormatBuffer::default();
+	let mut w:StaticWString<1024>=StaticWString::new();
 	let r=fmt::write(&mut w,args);
 	if r.is_ok()
 	{
-		let b=&w.buffer;
-		let r=unsafe{GetStdHandle(STD_OUTPUT_HANDLE)};
-		if let Ok(h)=r
+		let b=w.as_slice();
+		if let Ok(h)=unsafe{GetStdHandle(STD_OUTPUT_HANDLE)}
 		{
-			let mut size:u32=w.used as u32;
-			let _=unsafe{WriteConsoleA(h, b, Some(&mut size as *mut u32), None)};
+			let mut size:u32=w.len() as u32;
+			let _=unsafe{WriteConsoleW(h, b, Some(&mut size as *mut u32), None)};
 		}
 	}
+}
+
+#[macro_export] macro_rules! naprint
+{
+	($($args:tt)*) =>
+	{
+		$crate::win::system_print(format_args!($($args)*))
+	};
 }
 
 // Implement required port routines for dlmalloc

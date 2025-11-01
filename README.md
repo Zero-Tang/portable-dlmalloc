@@ -20,10 +20,6 @@ To port `dlmalloc` to your platform, implement the following procedures:
 	void* custom_mmap(size_t length);
 	int custom_munmap(void* ptr,size_t length);
 	```
-- `custom_direct_mmap`: Extend the allocated pages. This is optional. Return `(void*)-1` to indicate failure/no-support.
-	```C
-	void* custom_direct_mmap(size_t length);
-	```
 - `init_lock`/`final_lock`/`acquire_lock`/`release_lock`: Implement thread-safety for `dlmalloc`. The minimal implementation can be a simple spinlock. You can leave the implementations empty for this set of routines if you do not need thread-safety.
 	```C
 	void init_lock(void* *lock);	// Initialize the mutex.

@@ -1672,14 +1672,13 @@ unsigned char _BitScanReverse(unsigned long *index, unsigned long mask);
 #ifdef PORTABLE
 void* custom_mmap(size_t length);
 int custom_munmap(void* ptr,size_t length);
-void* custom_direct_mmap(size_t length);
 
 void* memcpy(void* dest,const void* src,size_t count);
 void* memset(void* dest,int c,size_t count);
 
 #define MMAP_DEFAULT(s)		custom_mmap(s)
 #define MUNMAP_DEFAULT(a,s)	custom_munmap(a,s)
-#define DIRECT_MMAP_DEFAULT(s)	custom_direct_mmap(s)
+#define DIRECT_MMAP_DEFAULT(s)	MFAIL
 #else  /* PORTABLE */
 #define MUNMAP_DEFAULT(a, s)  munmap((a), (s))
 #define MMAP_PROT            (PROT_READ|PROT_WRITE)
@@ -2732,8 +2731,8 @@ static struct malloc_state _gm_;
    & ~(mparams.granularity - SIZE_T_ONE))
 
 
-/* For mmap, use granularity alignment on windows, else page-align */
-#ifdef WIN32
+/* For mmap, use granularity alignment on windows or portable, else page-align */
+#if defined(WIN32) ||defined(PORTABLE)
 #define mmap_align(S) granularity_align(S)
 #else
 #define mmap_align(S) page_align(S)

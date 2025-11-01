@@ -1,21 +1,28 @@
 // Rust example for using portable dlmalloc
 use core::{fmt,ffi::c_void,ptr::null_mut,sync::atomic::{AtomicUsize,Ordering}};
-use crate::{naprint, FormatBuffer};
+use crate::naprint;
 
 use libc::*;
+use static_collections::string::StaticString;
 
 pub fn system_print(args:fmt::Arguments)
 {
-	let mut w=FormatBuffer::default();
-	let r=fmt::write(&mut w,args);
-	if r.is_ok()
+	let mut w:StaticString<1024>=StaticString::new();
+	if fmt::write(&mut w,args).is_ok()
 	{
-		let b=&w.buffer;
 		unsafe
 		{
-			write(1,b.as_ptr().cast(),w.used);
+			write(1,w.as_ptr().cast(),w.len());
 		}
 	}
+}
+
+#[macro_export] macro_rules! naprint
+{
+	($($args:tt)*) =>
+	{
+		$crate::linux::system_print(format_args!($($args)*))
+	};
 }
 
 // Implement required port routines for dlmalloc

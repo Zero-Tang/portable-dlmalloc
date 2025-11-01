@@ -41,12 +41,6 @@ int custom_munmap(void* ptr,size_t length)
 	return 0;
 }
 
-void* custom_direct_mmap(size_t length)
-{
-	// Return -1 because we don't have to support direct-mmap.
-	return (void*)-1;
-}
-
 #define LOCK_IS_FREE	(void*)0
 #define LOCK_IN_USE		(void*)1
 

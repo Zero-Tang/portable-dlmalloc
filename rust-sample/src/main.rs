@@ -1,66 +1,21 @@
 // Rust example for using portable dlmalloc
 #![feature(allocator_api)]
 
-use core::{fmt,ptr::null_mut,ffi::c_void,alloc::AllocError};
+use core::{alloc::AllocError};
 use portable_dlmalloc::{alt_alloc::AltAlloc, DLMalloc, MspaceAlloc};
 
 #[cfg(target_os="windows")] mod win;
-#[cfg(target_os="windows")] use win::*;
 #[cfg(target_os="linux")] mod linux;
-#[cfg(target_os="linux")] use linux::*;
-
-// Implement a formatter without alloc operation!
-struct FormatBuffer
-{
-	buffer:[u8;512],
-	used:usize
-}
-
-impl Default for FormatBuffer
-{
-	fn default() -> Self
-	{
-		Self
-		{
-			buffer:[0;512],
-			used:0
-		}
-	}
-}
-
-impl fmt::Write for FormatBuffer
-{
-	fn write_str(&mut self, s: &str) -> fmt::Result
-	{
-		let remainder=&mut self.buffer[self.used..];
-		let current=s.as_bytes();
-		if remainder.len()<current.len()
-		{
-			return Err(fmt::Error);
-		}
-		remainder[..current.len()].copy_from_slice(current);
-		self.used+=current.len();
-		Ok(())
-	}
-}
-
-#[macro_export] macro_rules! naprint
-{
-	($($args:tt)*) =>
-	{
-		system_print(format_args!($($args)*))
-	};
-}
 
 #[macro_export] macro_rules! naprintln
 {
 	() =>
 	{
-		naprint!("\n")
+		$crate::naprint!("\n")
 	};
 	($($arg:tt)*) =>
 	{
-		naprint!("{}\n",format_args!($($arg)*))
+		$crate::naprint!("{}\n",format_args!($($arg)*))
 	};
 }
 
@@ -79,11 +34,6 @@ static MSPACE_ALT_ALLOCATOR:MspaceAlloc=MspaceAlloc::new(0x500000);
 #[no_mangle] extern "C" fn custom_abort()->!
 {
 	panic!("The dlmalloc library executed abort!\n");
-}
-
-#[no_mangle] unsafe extern "C" fn custom_direct_mmap(_length:usize)->*mut c_void
-{
-	null_mut::<u8>().sub(1).cast()
 }
 
 fn test_realloc()
