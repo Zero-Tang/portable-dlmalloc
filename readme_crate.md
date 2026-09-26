@@ -43,15 +43,18 @@ Use this allocator only if:
 - You need to destroy the allocator in one-shot, without tracing all allocated pages.
 
 ### Alternate Allocator
-The [Allocator Trait](https://doc.rust-lang.org/alloc/alloc/trait.Allocator.html) is currently nightly-only. You are required to use a nightly rust compiler in order to use this feature. \
-To use alternate alloactor, you will have to declare that your crate uses `allocator_api`:
+The [Allocator Trait](https://doc.rust-lang.org/alloc/alloc/trait.Allocator.html) is stablized in rustc version 1.100.0. You are still required to use a nightly rust compiler in order to use this feature until 1.100.0 is released as beta/stable. \
+If you're using nightly rustc before 2026-09-23, you will have to declare that your crate uses `allocator_api`:
 ```Rust
 #![feature(allocator_api)]
 ```
-You also need to enable `alt-alloc` in `Cargo.toml` section:
+This feature flag is no longer required in the latest nightly rust compiler. \
+Once the rustc 1.100.0 is released as the stable version, this branch will be merged into `master`. Version `0.*` will be reserved for future experimental features which relies on features from nightly rustc.
+
+You also need to enable `alt-alloc` feature in `Cargo.toml` section:
 ```toml
 [dependencies.portable-dlmalloc]
-version = "0.3.3"
+version = "0.4.1"
 features = ["alt-alloc"]
 ```
 To use alternate allocator, you need to create an allocator using a reference to `AltAlloc`:

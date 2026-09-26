@@ -1,10 +1,9 @@
 [package]
 name = "portable-dlmalloc"
-version = "0.4.0"
+version = "0.4.1"
 edition = "2024"
 license = "MIT"
 description = "Portable Fork of Doug Lea's malloc Implementation."
-homepage = "https://github.com/Zero-Tang/portable-dlmalloc"
 repository = "https://github.com/Zero-Tang/portable-dlmalloc"
 readme = "readme_crate.md"
 keywords = ["no_std","allocator","portable"]
@@ -18,4 +17,4 @@ members = ["rust-sample"]
 alt-alloc = []
 
 [build-dependencies]
-cc = "1.2.44"
+cc = "1.5.1"

@@ -1,5 +1,4 @@
 #![no_std]
-#![feature(allocator_api)]
 
 use core::{alloc::*, ffi::c_void, ptr::null_mut, sync::atomic::*};
 

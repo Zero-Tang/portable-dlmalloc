@@ -1,5 +1,5 @@
 // Rust example for using portable dlmalloc
-#![feature(allocator_api)]
+#![feature(allocator_ext)]
 
 use core::{alloc::AllocError};
 use portable_dlmalloc::{alt_alloc::AltAlloc, DLMalloc, MspaceAlloc};
