@@ -5,7 +5,7 @@ Portable Fork of Doug Lea's `malloc` Implementation for Rust.
 [This code is originally implemented by Doug Lea.](https://gee.cs.oswego.edu/dl/html/malloc.html) The original source code is no longer available from [the FTP URL listed in the website](ftp://g.oswego.edu/pub/misc/malloc.c), but you can still find it through [Wayback Machine](https://web.archive.org/web/20190530015756/ftp://g.oswego.edu/pub/misc/malloc.c).
 
 You may use this [crate](https://crates.io/crates/portable-dlmalloc) to help you make a portable global allocator. \
-You will have to implement the eight C functions as described in [Port To Your Platform](#port-to-your-platform) chapter.
+You will have to implement the seven C functions as described in [Port To Your Platform](#port-to-your-platform) chapter.
 
 `dlmalloc` guarantees the alignment of allocation in comparison to just some wrappers on `malloc` functions (e.g.: wrapping `HeapAlloc` in Windows). If your structure is defined to be aligned on a big alignment (e.g.: 1024 bytes), this allocator guarantees the returned pointer if aligned on your specific boundary. The minimum alignment of `dlmalloc` is four times of the pointer size. (e.g.: 32 bytes on 64-bit platform.)
 
@@ -55,38 +55,26 @@ Use this allocator only if:
 - You need to destroy the allocator in one-shot, without tracing all allocated pages.
 
 ### Alternate Allocator
-The [Allocator Trait](https://doc.rust-lang.org/alloc/alloc/trait.Allocator.html) is stablized in rustc version 1.100.0. You are still required to use a nightly rust compiler in order to use this feature until 1.100.0 is released as beta/stable. \
-If you're using nightly rustc before 2026-09-23, you will have to declare that your crate uses `allocator_api`:
-```Rust
-#![feature(allocator_api)]
-```
-This feature flag is no longer required in the latest nightly rust compiler. \
-Once the rustc 1.100.0 is released as the stable version, this branch will be merged into `master`. Version `0.*` will be reserved for future experimental features which relies on features from nightly rustc.
+The [Allocator Trait](https://doc.rust-lang.org/alloc/alloc/trait.Allocator.html) is stablized in rustc version 1.100.0. As such, this crate requires MSRV 1.100 due to the implementation of `Allocator` trait.
 
 You also need to enable `alt-alloc` feature in `Cargo.toml` section:
 ```toml
 [dependencies.portable-dlmalloc]
-version = "0.4.1"
+version = "1.4.0"
 features = ["alt-alloc"]
 ```
-To use alternate allocator, you need to create an allocator using a reference to `AltAlloc`:
+To use alternate allocator, you need to create an allocator using a reference to `MspaceAlloc`:
 ```Rust
-use portable_dlmalloc::AltAlloc;
+use portable_dlmalloc::MspaceAlloc;
 
-let a=AltAlloc::new(0,false);
-let ap:Box::<u32,&AltAlloc>=Box::new_in(123,&a);
+let a=MspaceAlloc::new(0x10000);
+let ap:Box::<u32,&MspaceAlloc>=Box::new_in(123,&a);
 println!("{:p} | {}",&raw const *ap,ap);
 ```
-Please note that alternate allocator is a nightly-only API. If Rust removes this feature in future, this feature will be removed from this crate as well.
 
-**Caveat**: You must use the allocator in references, as the `AltAlloc` **does not implement** `Copy` trait!
+**Caveat**: You must use the allocator in references, as the `MspaceAlloc` **does not implement** `Copy` trait due to its implementation of `Drop` trait!
 
-#### Mspace Allocator as Alternate Allocator
-The `MspaceAlloc` allocator can also be used for custom allocator.
-
-Since the `new` method is `const fn`, you can declare a custom allocator as a static variable without using something like `lazy_static`. However, the `Drop` trait of `MspaceAlloc` won't be called if such allocator is declared as static variable!
-
-**Caveat**: You must use the allocator in references, as the `MspaceAlloc` **does not implement** `Copy` trait!
+**Caveat**: You must manually drop the `MspaceAlloc` if the allocator is declared in a static variable!
 
 ### Raw FFI
 The `raw` module from this crate exports FFI bindings for `dlmalloc` library.
@@ -116,22 +104,22 @@ To port `dlmalloc` to your platform, implement the following procedures:
 
 - `custom_mmap`/`custom_munmap`: Allocate and free pages from the system. `mmap` should return `(void*)-1` to indicate failure instead of `NULL`. `munmap` should return `0` to indicate success, and `-1` to indicate failure.
 	```Rust
-	#[no_mangle] unsafe extern "C" custom_mmap(length:usize)->*mut c_void;
-	#[no_mangle] unsafe extern "C" custom_munmap(ptr:*mut c_void,length:usize)->i32;
+	#[unsafe(no_mangle)] unsafe extern "C" custom_mmap(length:usize)->*mut c_void;
+	#[unsafe(no_mangle)] unsafe extern "C" custom_munmap(ptr:*mut c_void,length:usize)->i32;
 	```
 	Hint: If you are in baremetal environment without `mmap`-like services like outdated embedded systems, you can just return the pointer to the free memory. \
 	Note: This crate does not support `sbrk`, even though original implementation of `dlmalloc` supports it. Just emulate the behavior of `mmap` with `sbrk`.
 - `init_lock`/`final_lock`/`acquire_lock`/`release_lock`: Implement thread-safety for `dlmalloc`. The minimal implementation can be a simple spinlock. You can leave the implementations empty for this set of routines if you do not need thread-safety. \
 	The exact type of `lock` depends on your implementation. It can be `*mut T` where T can be anything that has the size of a pointer.
 	```Rust
-	#[no_mangle] unsafe extern "C" init_lock(lock:*mut *mut c_void);    // Initialize the mutex.
-	#[no_mangle] unsafe extern "C" final_lock(lock:*mut *mut c_void);   // Finalize the mutex.
-	#[no_mangle] unsafe extern "C" acquire_lock(lock:*mut *mut c_void); // Acquire the mutex.
-	#[no_mangle] unsafe extern "C" release_lock(lock:*mut *mut c_void); // Release the mutex.
+	#[unsafe(no_mangle)] unsafe extern "C" init_lock(lock:*mut *mut c_void);    // Initialize the mutex.
+	#[unsafe(no_mangle)] unsafe extern "C" final_lock(lock:*mut *mut c_void);   // Finalize the mutex.
+	#[unsafe(no_mangle)] unsafe extern "C" acquire_lock(lock:*mut *mut c_void); // Acquire the mutex.
+	#[unsafe(no_mangle)] unsafe extern "C" release_lock(lock:*mut *mut c_void); // Release the mutex.
 	```
 - `custom_abort`: Implement `abort()` routine. `dlmalloc` calls `custom_abort()` when internal assertion fails. You may use panic here.
 	```Rust
-	#[no_mangle] unsafe extern "C" custom_abort(message:*const u8,src_file:*const u8,src_line:u32)->!;
+	#[unsafe(no_mangle)] unsafe extern "C" custom_abort(message:*const u8,src_file:*const u8,src_line:u32)->!;
 	```
 	Note that `message` and `src_file` are null-terminated strings. The encodings of the string is implementation-specific of the C compiler. It is your duty to convert them into UTF-8 encoding. \
 	The `message` string is guaranteed to contain ASCII characters only. However, `src_file` may contain non-ASCII characters.

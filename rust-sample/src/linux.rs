@@ -4,6 +4,8 @@ use core::{fmt,ffi::c_void,ptr::null_mut,sync::atomic::{AtomicUsize,Ordering}};
 use libc::*;
 use static_collections::string::StaticString;
 
+use crate::naprintln;
+
 #[macro_export] macro_rules! naprint
 {
 	($($args:tt)*) =>
