@@ -2,7 +2,7 @@
 #![feature(allocator_ext)]
 
 use core::{alloc::AllocError};
-use portable_dlmalloc::{alt_alloc::AltAlloc, DLMalloc, MspaceAlloc};
+use portable_dlmalloc::{DLMalloc, MspaceAlloc};
 
 #[cfg(target_os="windows")] mod win;
 #[cfg(target_os="linux")] mod linux;
@@ -85,18 +85,6 @@ fn main()
 	assert_eq!(pp as usize & (align_of::<u32>()-1),0);
 	assert_eq!(pq as usize & (align_of::<AlignedHigher>()-1),0);
 	naprintln!("Testing allocator API...");
-	// Try allocator API.
-	let a=AltAlloc::new(0x300000,true);
-	let ab:Box::<u32,&AltAlloc>=Box::new_in(4,&a);
-	naprintln!("{:p} | {}",&raw const *ab,ab);
-	let mut av:Vec::<u32,&AltAlloc>=Vec::new_in(&a);
-	for i in v
-	{
-		av.push(i);
-	}
-	naprintln!("av1: {:p} | {:?}",av.as_ptr(),av);
-	let av2:Vec::<u8,&AltAlloc>=Vec::with_capacity_in(0x300000,&a);
-	naprintln!("av2: {:p} | {:?}",av2.as_ptr(),av2);
 	// Try allocator API on MspaceAlloc.
 	naprintln!("Testing allocator API on Mspace API...");
 	let ab:Box::<u32,&MspaceAlloc>=Box::new_in(15,&MSPACE_ALT_ALLOCATOR);

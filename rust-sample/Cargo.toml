@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-static-collections = "0.2.0"
+static-collections = "0.6.1"
 
 [dependencies.portable-dlmalloc]
 path = ".."
@@ -15,4 +15,4 @@ version="0.62.2"
 features=["Win32_System_Memory","Win32_System_Threading","Win32_System_Console"]
 
 [target.'cfg(unix)'.dependencies.libc]
-version = "0.2.177"
+version = "0.2.191"

@@ -1,14 +1,13 @@
 #![no_std]
 
 use core::{alloc::*, ffi::c_void, ptr::null_mut, sync::atomic::*};
+#[cfg(feature = "alt-alloc")]
+use core::{ptr::NonNull, slice};
 
 /// This module defines C FFI definitions of dlmalloc library.
 /// Use this library only if you understand the safety.
 pub mod raw;
 use raw::*;
-
-/// This module contains the alternate allocator API.
-#[cfg(feature="alt-alloc")] pub mod alt_alloc;
 
 unsafe extern "C"
 {
@@ -145,6 +144,53 @@ impl MspaceAlloc
 			{
 				destroy_mspace(self.mspace.load(Ordering::Acquire));
 			}
+		}
+	}
+}
+
+#[cfg(feature = "alt-alloc")]
+unsafe impl Allocator for MspaceAlloc
+{
+	fn allocate(&self,layout:Layout)->Result<NonNull<[u8]>,AllocError>
+	{
+		unsafe
+		{
+			// Lazily initialize mspace.
+			if self.init.compare_exchange(false,true,Ordering::Acquire,Ordering::Relaxed).is_ok()
+			{
+				let msp=create_mspace(self.capacity,1);
+				if msp.is_null()
+				{
+					return Err(AllocError);
+				}
+				self.mspace.store(msp,Ordering::Release);
+			}
+			let p:*mut u8=mspace_memalign(self.mspace.load(Ordering::Acquire),layout.align(),layout.size()).cast();
+			if p.is_null()
+			{
+				Err(AllocError)
+			}
+			else
+			{
+				let r:&mut [u8]=slice::from_raw_parts_mut(p,layout.size());
+				Ok(NonNull::from_mut(r))
+			}
+		}
+	}
+
+	unsafe fn deallocate(&self,ptr:NonNull<u8>,_layout:Layout)
+	{
+		unsafe{mspace_free(self.mspace.load(Ordering::Acquire),ptr.as_ptr().cast())}
+	}
+}
+
+impl Drop for MspaceAlloc
+{
+	fn drop(&mut self)
+	{
+		unsafe
+		{
+			self.destroy();
 		}
 	}
 }
