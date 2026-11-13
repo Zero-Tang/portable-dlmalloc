@@ -31,9 +31,10 @@ int custom_munmap(void* ptr,size_t length)
 	return b?0:-1;
 }
 
-void custom_abort()
+void custom_abort(char* message,const char* src_fn,const unsigned int src_ln)
 {
 	puts("The dlmalloc library called abort!");
+	printf("Reason: %s\n%s@%u\n",message,src_fn,src_ln);
 	ExitProcess(1);
 }
 

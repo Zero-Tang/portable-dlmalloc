@@ -5,10 +5,18 @@ use core::ffi::c_void;
 
 pub type DLInspectHandler=unsafe extern "C" fn (start:*mut c_void,end:*mut c_void,used_bytes:usize,callback_arg:*mut c_void);
 
+/// Used by `dlmallopt` routine. \
+/// Defines when dlmalloc will trim blank pages.
 pub const M_TRIM_THRESHOLD:i32=-1;
+/// Used by `dlmallopt` routine. \
+/// Defines the granularity of the page size. (e.g.: 4K for x86)
 pub const M_GRANULARITY:i32=-2;
+/// Used by `dlmallopt` routine. \
+/// Defines the minimum size of `mmap` call.
 pub const M_MMAP_THRESHOLD:i32=-3;
 
+/// This structure is returned by `dlmallinfo` and `mspace_mallinfo` routines. \
+/// It reports the current status of the heap.
 #[repr(C)] pub struct MallInfo
 {
 	/// non-mapped spaced allcated from system

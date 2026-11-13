@@ -23,32 +23,41 @@ unsafe impl GlobalAlloc for DLMalloc
 {
 	unsafe fn alloc(&self, layout: Layout) -> *mut u8
 	{
-		unsafe{dlmemalign(layout.align(),layout.size()).cast()}
+		unsafe
+		{
+			dlmemalign(layout.align(),layout.size()).cast()
+		}
 	}
 
 	unsafe fn dealloc(&self, ptr: *mut u8, _layout: Layout)
 	{
-		unsafe{dlfree(ptr.cast())};
+		unsafe
+		{
+			dlfree(ptr.cast())
+		}
 	}
 
 	unsafe fn realloc(&self, ptr: *mut u8, layout: Layout, new_size: usize) -> *mut u8
 	{
-		// The `dlrealloc` function does not guarantee the original alignment!
+		// We can optimize the `realloc` method by trying realloc-in-place.
 		let p=unsafe{dlrealloc_in_place(ptr.cast(),new_size)};
 		if p==ptr.cast()
 		{
-			// In-place allocation is successful. Just return the pointer.
+			// In-place reallocation is successful. Just return the original pointer.
 			ptr
 		}
 		else
 		{
-			// In-place allocation failed. Allocate a new pointer.
-			assert!(p.is_null(),"dlrealloc_in_place returned non-null pointer on return!");
+			// Failed to reallocate in-place! Try to allocate a new chunk.
+			assert!(p.is_null(),"dlrealloc_in_place returned Non-Null pointer on failure!");
 			let p=unsafe{dlmemalign(layout.align(),new_size)};
-			unsafe
+			if !p.is_null()
 			{
-				memcpy(p,ptr.cast(),layout.size());
-				dlfree(ptr.cast());
+				unsafe
+				{
+					memcpy(p,ptr.cast(),layout.size().min(new_size));
+					dlfree(ptr.cast());
+				}
 			}
 			p.cast()
 		}
@@ -83,21 +92,25 @@ unsafe impl GlobalAlloc for MspaceAlloc
 
 	unsafe fn realloc(&self, ptr: *mut u8, layout: Layout, new_size: usize) -> *mut u8
 	{
+		// We can optimize the `realloc` method by trying realloc-in-place.
 		let p=unsafe{mspace_realloc_in_place(self.mspace.load(Ordering::Acquire),ptr.cast(),new_size)};
 		if p==ptr.cast()
 		{
-			// In-place allocation is successful. Just return the pointer.
+			// In-place reallocation is successful. Just return the original pointer.
 			ptr
 		}
 		else
 		{
-			// In-place allocation failed. Allocate a new pointer.
-			assert!(p.is_null(),"mspace_realloc_in_place returned non-null pointer on return!");
+			// Failed to reallocate in-place! Try to allocate a new chunk.
+			assert!(p.is_null(),"mspace_realloc_in_place returned Non-Null pointer on failure!");
 			let p=unsafe{mspace_memalign(self.mspace.load(Ordering::Acquire),layout.align(),new_size)};
-			unsafe
+			if !p.is_null()
 			{
-				memcpy(p,ptr.cast(),layout.size());
-				mspace_free(self.mspace.load(Ordering::Acquire),ptr.cast());
+				unsafe
+				{
+					memcpy(p,ptr.cast(),layout.size().min(new_size));
+					mspace_free(self.mspace.load(Ordering::Acquire),ptr.cast());
+				}
 			}
 			p.cast()
 		}
@@ -128,7 +141,10 @@ impl MspaceAlloc
 	{
 		if self.init.compare_exchange(true,false,Ordering::Acquire,Ordering::Relaxed).is_ok()
 		{
-			unsafe{destroy_mspace(self.mspace.load(Ordering::Acquire))};
+			unsafe
+			{
+				destroy_mspace(self.mspace.load(Ordering::Acquire));
+			}
 		}
 	}
 }

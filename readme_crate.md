@@ -9,6 +9,18 @@ You will have to implement the eight C functions as described in [Port To Your P
 
 `dlmalloc` guarantees the alignment of allocation in comparison to just some wrappers on `malloc` functions (e.g.: wrapping `HeapAlloc` in Windows). If your structure is defined to be aligned on a big alignment (e.g.: 1024 bytes), this allocator guarantees the returned pointer if aligned on your specific boundary. The minimum alignment of `dlmalloc` is four times of the pointer size. (e.g.: 32 bytes on 64-bit platform.)
 
+### Specify Default Granularity
+To specify a default granularity, you should define an environment variable `DEFAULT_MMAP_GRANULARITY` before you compile. \
+For instance, to define the granularity to 64K in Windows:
+```bat
+set DEFAULT_MMAP_GRANULARITY=0x10000
+```
+Or in Linux:
+```sh
+export DEFAULT_MMAP_GRANULARITY=0x10000
+```
+You must specify a granularity to be a integer power of two. Note: only `0x` prefix is recognized by the build script. This means you can only use either hexadecimal or decimal integers.
+
 ### Global Allocator
 To use this crate as your global allocator:
 ```Rust
@@ -121,8 +133,8 @@ To port `dlmalloc` to your platform, implement the following procedures:
 	```Rust
 	#[no_mangle] unsafe extern "C" custom_abort(message:*const u8,src_file:*const u8,src_line:u32)->!;
 	```
-	Note that message and src_file are null-terminated strings. The encodings of the string is implementation-specific of the C compiler. It is your duty to convert them into UTF-8 encoding. \
-	The message string is guaranteed to contain ASCII characters only. However, src_file may contain non-ASCII characters.
+	Note that `message` and `src_file` are null-terminated strings. The encodings of the string is implementation-specific of the C compiler. It is your duty to convert them into UTF-8 encoding. \
+	The `message` string is guaranteed to contain ASCII characters only. However, `src_file` may contain non-ASCII characters.
 - `memcpy`/`memset`: I suppose no explanations are needed for these two. `dlmalloc` uses these two routines, but they can be easily implemented anyway. You do not need to implement these two routines in Rust if your linker can find libraries that implement these two routines. Note that MSVC SDK provides source code of high-performance `memcpy` and `memset` implementations in Assembly!
 
 Note: If you are using Rust 2024 or higher, you must use `#[unsafe(no_mangle)]` as prefix! See [Rust unsafe attributes](https://doc.rust-lang.org/edition-guide/rust-2024/unsafe-attributes.html) for more details. \
@@ -130,7 +142,7 @@ If, for some reasons, these procedure names must be reserved in your project, yo
 
 ## Build
 Since the core of the `dlmalloc` library is written in C, a working C compiler is required. \
-If your target is somewhat unorthodox, you need to set environment variables before executing `cargo build`:
+If your target is somewhat unorthodox, you need to set the following environment variables before executing `cargo build`:
 
 - `CC`: This environment variable specifies which compiler executable should be used to compile `malloc.c`.
 - `AR`: This environment variable specifies which archiver executable should be used to archive this crate into a static library.

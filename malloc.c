@@ -579,7 +579,10 @@ MAX_RELEASE_CHECK_RATE   default: 4095 unless not HAVE_MMAP
 #ifndef MALLOC_FAILURE_ACTION
 #define MALLOC_FAILURE_ACTION
 
+#ifndef _MSC_VER
+/* Non-MSVC compiler might not internally define size_t. */
 #include <stddef.h>
+#endif /* _MSC_VER */
 #endif /* MALLOC_FAILURE_ACTION */
 
 void custom_abort(char* message,const char* fn,const unsigned int ln);
@@ -2732,7 +2735,7 @@ static struct malloc_state _gm_;
 
 
 /* For mmap, use granularity alignment on windows or portable, else page-align */
-#if defined(WIN32) ||defined(PORTABLE)
+#if defined(WIN32) || defined(PORTABLE)
 #define mmap_align(S) granularity_align(S)
 #else
 #define mmap_align(S) page_align(S)
@@ -3158,7 +3161,7 @@ static int init_mparams(void) {
   if (malloc_global_mutex_status <= 0)
 	init_malloc_global_mutex();
 #endif
-
+  /* The variable r is just intended for eliminating compiler warnings. */
   r = ACQUIRE_MALLOC_GLOBAL_LOCK();
   r = r;
   if (mparams.magic == 0) {

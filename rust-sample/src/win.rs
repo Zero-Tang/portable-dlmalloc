@@ -6,7 +6,6 @@ use static_collections::ffi::wstring::StaticWString;
 use windows::Win32::System::{Memory::*,Threading::*,Console::*};
 
 use crate::naprintln;
-
 #[allow(dead_code)]
 pub struct SysAlloc;
 

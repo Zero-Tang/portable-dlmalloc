@@ -31,22 +31,43 @@ static MSPACE_ALT_ALLOCATOR:MspaceAlloc=MspaceAlloc::new(0x500000);
 	c:u32
 }
 
-#[no_mangle] extern "C" fn custom_abort()->!
+/// ## Safety
+/// The lifetime of the returned reference is not guaranteed to be safe. \
+/// You have to manually validate the lifetime on your own.
+unsafe fn nulstr_from_ptr<'a>(string:*const u8)->&'a str
 {
-	panic!("The dlmalloc library executed abort!\n");
+	// Check the length of string.
+	let mut s:usize=0;
+	loop
+	{
+		if string.add(s).read()==0
+		{
+			break;
+		}
+		s+=1;
+	}
+	let str_slice=core::slice::from_raw_parts(string,s);
+	core::str::from_utf8(str_slice).unwrap()
+}
+
+#[no_mangle] extern "C" fn custom_abort(message:*const u8,src_file:*const u8,src_line:u32)->!
+{
+	let msg=unsafe{nulstr_from_ptr(message)};
+	let sfn=unsafe{nulstr_from_ptr(src_file)};
+	panic!("The dlmalloc library executed abort! Reason: {msg}\n{sfn}@{src_line}");
 }
 
 fn test_realloc()
 {
 	naprintln!("Testing realloc-alignment...");
-	// Try realloc alignemnt.
+	// Force Vec to grow and verify the allocation remains aligned.
 	let mut v1:Vec::<AlignedHigher>=Vec::with_capacity(2);
 	v1.push(AlignedHigher::default());
 	v1.push(AlignedHigher::default());
 	let v2=vec![123;2345];
 	naprintln!("v1: {:p}, v2: {:p}",v1.as_ptr(),v2.as_ptr());
 	v1.push(AlignedHigher::default());
-	naprintln!("v1: {:p}",v1.as_ptr());
+	naprintln!("v1: {v1:?} is located at {:p}",v1.as_ptr());
 }
 
 fn main()
